@@ -17,7 +17,7 @@
 
 | 角色 | 功能 |
 |---|---|
-| 游客 / 公开端 | 植物展廊（关键词/省份/类别/年份/精选筛选与排序）、观察详情（多图、地点、动态描述项、教师审核意见、评论、星级评分）、物种库、全国 3D 植物地图（省级立体柱 + 城市节点 + 物种 TOP 榜）、全局搜索 |
+| 游客 / 公开端 | 植物展廊（关键词/省份/类别/年份/精选筛选与排序）、观察详情（多图、地点、动态描述项、教师审核意见、评论、星级评分）、物种库、**全国 3D 植物地图**（省份名称常驻标签、全国精选作品卡片与 SVG 引导线、点击省份查看该省学生作品抽屉、省级立体柱 + 城市节点 + 物种 TOP 榜）、全局搜索 |
 | 学生（Web / App） | 采集植物观察：拍照或相册多选（最多 10 张，自动压缩）、器官标签、封面与排序、省市区手选、观察时间与描述、动态描述项；草稿保存（服务端 + App 本地草稿）、提交审核、撤回、被驳回后修改重提；我的植物（按状态分栏）、待鉴定（未知植物）、物种建议、消息通知 |
 | 教师 | 植物观察审核中心：待审列表、详情查看、通过（可绑定标准物种）、驳回（必填意见）、数据质量提示（缺照片/缺省份/未选物种未标待鉴定/时间异常/疑似重复）、批量审核、设为优秀观察；新物种建议审批（通过即自动建档）；点评与评分 |
 | 管理员 | 类别与物种库维护、观察记录治理（强制下线 / 重新上架）、图片健康与一致性巡检（只报告不自动删除）、平台统计 |
@@ -112,6 +112,7 @@ cd student-app && npm install && npm run dev:h5
 ## 隐私与内容安全设计
 
 - **不采集定位**：不使用 GPS/基站定位，地点由学生主动选择省/市/区县（GB/T 2260 代码）+ 手填文字；App 不申请定位权限，Nginx 禁用 geolocation
+- **花名优先**：学生可设置公开展示花名（V13 `display_name`，接口 `PUT /api/student/plant/profile/display-name`），公开端一律优先展示花名；未设置时再按下方脱敏策略回退
 - **姓名可脱敏**：`plant.privacy.show-real-name`（环境变量 `PLANT_SHOW_REAL_NAME`）默认展示真实姓名，置 false 则按 张* / 欧**娜 规则脱敏（展廊、详情、评论、审核列表统一生效）
 - **审核后公开**：仅 `status=APPROVED` 且 `is_public=1` 的观察进入展廊/地图/公开搜索；管理员可随时强制下线
 - **滥用防护**：登录连续失败 5 次锁定 10 分钟、评论每分钟超 20 条拒绝、图片炸弹（超大尺寸/像素）拒收、接口限流
@@ -190,6 +191,7 @@ python -X utf8 scripts/restore-plant.py --backup-dir backup/plant-media
 | 文档 | 内容 |
 |---|---|
 | [docs/plant-platform-transformation.md](docs/plant-platform-transformation.md) | 平台改造实现说明（V2 基线） |
+| [docs/plant-map-interaction.md](docs/plant-map-interaction.md) | 3D 地图交互链路：省名标签、点省作品抽屉、全国精选与引导线、学生花名 |
 | [docs/plant-platform-v4-release-notes.md](docs/plant-platform-v4-release-notes.md) | V4 发布说明、RC 冻结与回归清单、修复记录 |
 | [docs/plant-platform-v4-production.md](docs/plant-platform-v4-production.md) | 生产部署（HTTPS/Nginx/环境分层）、监控告警、安全核对、隐私与无障碍 |
 | [docs/plant-platform-operations.md](docs/plant-platform-operations.md) | 运维：备份恢复、图片一致性、演示数据准备、测试数据治理、排障 |
