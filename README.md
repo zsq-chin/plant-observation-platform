@@ -191,7 +191,8 @@ python -X utf8 scripts/restore-plant.py --backup-dir backup/plant-media
 | 文档 | 内容 |
 |---|---|
 | [docs/plant-platform-transformation.md](docs/plant-platform-transformation.md) | 平台改造实现说明（V2 基线） |
-| [docs/plant-map-interaction.md](docs/plant-map-interaction.md) | 3D 地图交互链路：省名标签、点省作品抽屉、全国精选与引导线、学生花名 |
+| [docs/plant-map-interaction.md](docs/plant-map-interaction.md) | 3D 地图交互链路：省名标签、台湾省、点省作品抽屉、全国精选与引导线、学生花名 |
+| [docs/legacy-work-retirement.md](docs/legacy-work-retirement.md) | 旧作品体系收口：前端删除清单、后端依赖评估与分步下线路线 |
 | [docs/plant-platform-v4-release-notes.md](docs/plant-platform-v4-release-notes.md) | V4 发布说明、RC 冻结与回归清单、修复记录 |
 | [docs/plant-platform-v4-production.md](docs/plant-platform-v4-production.md) | 生产部署（HTTPS/Nginx/环境分层）、监控告警、安全核对、隐私与无障碍 |
 | [docs/plant-platform-operations.md](docs/plant-platform-operations.md) | 运维：备份恢复、图片一致性、演示数据准备、测试数据治理、排障 |

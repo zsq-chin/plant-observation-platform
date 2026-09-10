@@ -5,7 +5,14 @@ import tseslint from 'typescript-eslint'
 
 export default tseslint.config(
   {
-    ignores: ['**/dist/**', '**/dist-ssr/**', '**/coverage/**'],
+    ignores: [
+      '**/dist/**',
+      '**/dist-ssr/**',
+      '**/coverage/**',
+      // 学生端 H5 构建产物与安装包（由 student-app 构建产生，非源码）
+      'public/app/**',
+      'public/app-download/**',
+    ],
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
