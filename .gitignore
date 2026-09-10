@@ -89,6 +89,9 @@ student-app/unpackage/
 # 学生 App H5 构建产物（部署时由 student-app 构建产生，不入库）
 frontend/public/app/
 
+# 浏览器验证截图产物
+tmp-ui-check/
+
 # 分发的安装包与二维码（改用 GitHub Release 承载，避免二进制进入仓库历史）
 frontend/public/app-download/*.apk
 frontend/public/app-download/*.png
