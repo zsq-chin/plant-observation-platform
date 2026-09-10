@@ -63,8 +63,8 @@
       <template v-else>
         <div class="review-detail">
           <div class="review-detail__photos">
-            <el-image v-for="p in detail.photos || []" :key="String(p.photoId)" :src="resolveMediaUrl(p.fileUrl)" fit="cover" class="review-detail__photo"
-              :preview-src-list="(detail.photos || []).map((x) => x.fileUrl)" @error="onMediaError" />
+            <el-image v-for="p in detail.photos || []" :key="String(p.photoId)" :src="resolveMediaUrl(p.thumbnailUrl || p.fileUrl)" fit="cover" class="review-detail__photo"
+              :preview-src-list="(detail.photos || []).map((x) => resolveMediaUrl(x.fileUrl))" @error="onMediaError" />
           </div>
           <div class="review-detail__info">
             <h3>{{ detail.commonName || detail.reportedCommonName || "未命名植物" }} <i>{{ detail.scientificName || "" }}</i></h3>

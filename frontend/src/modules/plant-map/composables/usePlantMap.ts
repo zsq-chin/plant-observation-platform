@@ -1,6 +1,6 @@
 import { Map as MlMap, Marker as MlMarker, type MapMouseEvent, type SourceSpecification } from "maplibre-gl"
 import type { ChinaStatRow, RegionNode } from "../types"
-import { bboxOfFeature, featureWithStats, type GeoFeature } from "../utils/geo"
+import { bboxOfFeature, featureCode, featureWithStats, type GeoFeature } from "../utils/geo"
 
 export interface ChinaGeoJson {
   type: "FeatureCollection"
@@ -62,7 +62,11 @@ export function usePlantMap() {
   function featuresMap(): Map<string, GeoFeature> {
     const result = new Map<string, GeoFeature>()
     if (!geojson) return result
-    for (const feature of geojson.features) result.set(String(feature.id), feature)
+    for (const feature of geojson.features) {
+      const code = featureCode(feature)
+      if (!code) continue
+      result.set(code, feature)
+    }
     return result
   }
 
@@ -131,8 +135,10 @@ export function usePlantMap() {
     if (!map) return null
     const features = map.queryRenderedFeatures(event.point, { layers: layerIds() })
     if (!features.length) return null
-    const props = (features[0].properties ?? {}) as Record<string, unknown>
-    return { code: String(props.adcode ?? ""), name: String(props.name ?? "") }
+    const hit = features[0]
+    const props = (hit.properties ?? {}) as Record<string, unknown>
+    const code = featureCode({ id: hit.id as string | number | undefined, properties: { adcode: props.adcode as string | number | undefined } })
+    return { code, name: String(props.name ?? "") }
   }
 
   function hoverFeature(event: MapMouseEvent) {
@@ -184,6 +190,7 @@ export function usePlantMap() {
       instance.once("load", () => resolve())
       instance.once("error", () => reject(new Error("地图初始化失败")))
     })
+    addProvinceLabelsDebug()
     addProvinceLayers()
     bindEvents()
     renderProvinceLabels()
@@ -237,7 +244,16 @@ export function usePlantMap() {
     if (!map) return
     const active = new Set(codes)
     for (const key of featuresMap().keys()) {
-      map.setFeatureState({ source: "provinces", id: key }, { featured: active.has(key) })
+      map.setFeatureState({ source: "provinces", id: featureStateId(key) }, { featured: active.has(key) })
+    }
+  }
+
+  /** 调试：输出省份编码清单，便于确认台湾省 710000 已进入地图数据（详细修复方案 §24.4） */
+  function addProvinceLabelsDebug() {
+    if (!geojson) return
+    const codes = geojson.features.map((feature) => featureCode(feature)).filter(Boolean)
+    if (!codes.includes("710000")) {
+      console.warn("地图数据缺少台湾省(710000)几何，请检查 frontend/public/geo/china-provinces.json")
     }
   }
 
@@ -246,7 +262,8 @@ export function usePlantMap() {
     clearProvinceLabels()
     if (!map || !geojson) return
     for (const feature of geojson.features) {
-      const code = String(feature.id)
+      const code = featureCode(feature)
+      if (!code) continue
       const center = provinceCenter(code)
       if (!center) continue
       const name = String(feature.properties?.name ?? "")
@@ -290,15 +307,21 @@ export function usePlantMap() {
     provinceLabels.length = 0
   }
 
+  /** 高亮：业务用 provinceCode，落到 MapLibre 时用 GeoJSON 的 feature.id（详细修复方案 §21） */
+  function featureStateId(code: string): string | number {
+    const feature = featuresMap().get(code)
+    return feature?.id ?? code
+  }
+
   function setHoverState(code: string | null, active: boolean) {
     if (!map || !code) return
-    map.setFeatureState({ source: "provinces", id: code }, { hovered: active })
+    map.setFeatureState({ source: "provinces", id: featureStateId(code) }, { hovered: active })
   }
 
   function setSelected(code: string | null) {
     if (!map) return
     for (const key of featuresMap().keys()) {
-      map.setFeatureState({ source: "provinces", id: key }, { selected: key === code })
+      map.setFeatureState({ source: "provinces", id: featureStateId(key) }, { selected: key === code })
     }
   }
 
