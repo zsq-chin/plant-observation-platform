@@ -1,4 +1,10 @@
 -- 集成测试清理 — 按依赖顺序删除 MySQL 8 测试数据
+DELETE FROM plant_field_value;
+DELETE FROM plant_photo;
+DELETE FROM plant_comment;
+DELETE FROM plant_rating;
+DELETE FROM plant_review;
+DELETE FROM plant_observation;
 DELETE FROM work_like;
 DELETE FROM work_tag;
 DELETE FROM delete_request;

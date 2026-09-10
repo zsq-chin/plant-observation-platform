@@ -5,7 +5,6 @@ import com.jingxuan.enums.UserStatusEnum;
 import com.jingxuan.exception.BusinessException;
 import com.jingxuan.mapper.SysUserMapper;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -25,7 +24,6 @@ import java.util.regex.Pattern;
 /**
  * 自助注册与邮箱验证码。
  */
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class RegistrationService {
@@ -49,7 +47,7 @@ public class RegistrationService {
         JavaMailSender mailSender = mailSenderProvider.getIfAvailable();
 
         if (mailSender == null) {
-            log.warn("邮箱服务未配置（MAIL_* 环境变量），验证码仅记录日志");
+            throw new BusinessException("邮箱服务未配置，请联系管理员");
         }
         if (sysUserMapper.countByEmailAndRole(email, roleId) > 0) {
             throw new BusinessException("该邮箱已被注册");
@@ -64,21 +62,17 @@ public class RegistrationService {
         String code = String.format("%06d", RANDOM.nextInt(1_000_000));
         redisTemplate.opsForValue().set(verifyKey(email, roleId), code, CODE_TTL);
 
-        if (mailSender != null) {
-            try {
-                SimpleMailMessage message = new SimpleMailMessage();
-                message.setFrom(StringUtils.hasText(mailFrom) ? mailFrom : "noreply@jingxuan.com");
-                message.setTo(email);
-                message.setSubject("菁选注册验证码");
-                message.setText("您的注册验证码是：" + code + "，5分钟内有效。若非本人操作，请忽略本邮件。");
-                mailSender.send(message);
-            } catch (Exception e) {
-                redisTemplate.delete(verifyKey(email, roleId));
-                redisTemplate.delete(cooldownKey);
-                throw new BusinessException("验证码发送失败，请稍后重试");
-            }
-        } else {
-            log.info("[邮箱未配置] 验证码仅记录于日志: email={}, code={}", email, code);
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(StringUtils.hasText(mailFrom) ? mailFrom : "noreply@jingxuan.com");
+            message.setTo(email);
+            message.setSubject("菁选注册验证码");
+            message.setText("您的注册验证码是：" + code + "，5分钟内有效。若非本人操作，请忽略本邮件。");
+            mailSender.send(message);
+        } catch (Exception e) {
+            redisTemplate.delete(verifyKey(email, roleId));
+            redisTemplate.delete(cooldownKey);
+            throw new BusinessException("验证码发送失败，请稍后重试");
         }
     }
 

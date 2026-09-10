@@ -45,14 +45,17 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder passwordEncoder;
     private final LogService logService;
     private final TokenBlacklistService tokenBlacklistService;
+    private final com.jingxuan.plant.security.LoginThrottleService loginThrottleService;
 
     @Override
     public LoginResponse login(LoginRequest request) {
+        loginThrottleService.assertAllowed(request.getUsername());
         try {
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
                             request.getUsername(), request.getPassword()));
         } catch (BadCredentialsException e) {
+            loginThrottleService.recordFailure(request.getUsername());
             throw new UnauthorizedException("用户名或密码错误");
         } catch (DisabledException e) {
             throw new UnauthorizedException("账号已被禁用，请联系管理员");
@@ -60,12 +63,14 @@ public class AuthServiceImpl implements AuthService {
 
         SysUser user = sysUserMapper.findByUsername(request.getUsername());
         if (user == null) {
+            loginThrottleService.recordFailure(request.getUsername());
             throw new UnauthorizedException("用户不存在");
         }
         if (user.getStatus() == UserStatusEnum.DISABLED) {
             throw new UnauthorizedException("账号已被禁用，请联系管理员");
         }
 
+        loginThrottleService.reset(request.getUsername());
         String roleCode = getRoleCode(user.getRoleId());
         String token = jwtTokenProvider.generateToken(
                 user.getId(), user.getUsername(), roleCode,

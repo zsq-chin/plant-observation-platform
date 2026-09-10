@@ -2,26 +2,94 @@ package com.jingxuan.auth.service;
 
 import com.jingxuan.entity.SysUser;
 import com.jingxuan.enums.UserStatusEnum;
+import com.jingxuan.exception.BusinessException;
 import com.jingxuan.mapper.SysUserMapper;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.util.ReflectionTestUtils;
 
+import java.time.Duration;
 import java.util.Map;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class RegistrationServiceTest {
+
+    @Test
+    void sendsVerificationCodeWithConfiguredFromAddress() {
+        SysUserMapper users = mock(SysUserMapper.class);
+        StringRedisTemplate redis = mock(StringRedisTemplate.class);
+        @SuppressWarnings("unchecked")
+        ValueOperations<String, String> values = mock(ValueOperations.class);
+        JavaMailSender mailSender = mock(JavaMailSender.class);
+        @SuppressWarnings("unchecked")
+        ObjectProvider<JavaMailSender> mailSenderProvider = mock(ObjectProvider.class);
+        when(redis.opsForValue()).thenReturn(values);
+        when(values.setIfAbsent(
+                "jingxuan:verify:cooldown:preview@example.test:2",
+                "1",
+                Duration.ofSeconds(60))).thenReturn(true);
+        when(mailSenderProvider.getIfAvailable()).thenReturn(mailSender);
+        RegistrationService service = new RegistrationService(
+                users,
+                mock(PasswordEncoder.class),
+                redis,
+                mailSenderProvider);
+        ReflectionTestUtils.setField(service, "mailFrom", "noreply@jingxuan.test");
+
+        service.sendVerificationCode(Map.of(
+                "email", "preview@example.test",
+                "roleId", 2));
+
+        ArgumentCaptor<SimpleMailMessage> messageCaptor = ArgumentCaptor.forClass(SimpleMailMessage.class);
+        verify(mailSender).send(messageCaptor.capture());
+        SimpleMailMessage message = messageCaptor.getValue();
+        assertEquals("noreply@jingxuan.test", message.getFrom());
+        assertThat(message.getTo()).containsExactly("preview@example.test");
+        assertEquals("菁选注册验证码", message.getSubject());
+        assertThat(message.getText()).containsPattern("(?<!\\d)\\d{6}(?!\\d)");
+        verify(values).set(
+                eq("jingxuan:verify:preview@example.test:2"),
+                argThat(code -> code != null && code.matches("\\d{6}")),
+                eq(Duration.ofMinutes(5)));
+    }
+
+    @Test
+    void doesNotAcknowledgeVerificationCodeWhenMailSenderIsUnavailable() {
+        SysUserMapper users = mock(SysUserMapper.class);
+        StringRedisTemplate redis = mock(StringRedisTemplate.class);
+        @SuppressWarnings("unchecked")
+        ValueOperations<String, String> values = mock(ValueOperations.class);
+        when(redis.opsForValue()).thenReturn(values);
+        when(values.setIfAbsent(any(), any(), any(java.time.Duration.class))).thenReturn(true);
+        RegistrationService service = new RegistrationService(
+                users,
+                mock(PasswordEncoder.class),
+                redis,
+                emptyMailSenderProvider());
+
+        BusinessException error = assertThrows(BusinessException.class, () -> service.sendVerificationCode(Map.of(
+                "email", "preview@example.test",
+                "roleId", 1)));
+
+        assertThat(error.getMessage()).contains("邮箱服务未配置");
+        verify(redis, never()).opsForValue();
+    }
 
     @Test
     void teacherRegistrationCreatesPendingApprovalAccount() {

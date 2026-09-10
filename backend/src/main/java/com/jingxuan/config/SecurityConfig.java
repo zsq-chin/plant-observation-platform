@@ -60,6 +60,11 @@ public class SecurityConfig {
                             request.getMethod(), request.getRequestURI())).permitAll()
                     // 静态资源
                     .requestMatchers(HttpMethod.GET, "/uploads/**").permitAll()
+                    // Actuator：health/info 公开给负载/监控；其余端点仅 ADMIN（V4 §32）
+                    .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
+                    .requestMatchers("/actuator/**").hasRole("ADMIN")
+                    // 植物图片公开读取（上传/删除仍需鉴权）
+                    .requestMatchers(HttpMethod.GET, "/media/plants/**").permitAll()
                     // 前台公开展示接口
                     .requestMatchers("/api/public/**").permitAll()
                     // 公共评论列表 & 发表（游客也可评论）
@@ -85,4 +90,3 @@ public class SecurityConfig {
         return authenticationConfiguration.getAuthenticationManager();
     }
 }
-

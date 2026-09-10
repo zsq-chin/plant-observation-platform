@@ -134,3 +134,14 @@ INSERT INTO sys_menu (id, menu_name, parent_id, path, permission, type, icon, so
 -- 管理员角色菜单
 INSERT INTO sys_role_menu (id, role_id, menu_id) VALUES
 (1, 3, 1), (2, 3, 2), (3, 3, 8);
+-- 植物平台夹具（V7~V10 迁移已在空库执行：区域/类别/物种种子来自迁移）
+INSERT INTO plant_observation (id, submitter_id, class_id, class_name_snapshot, species_id, reported_common_name, category_id, province_code, province_name, city_code, city_name, district_code, district_name, location_text, observed_at, description, status, is_public, published_at, featured, view_count, submit_time) VALUES
+(9001, 100, 1, '2022级软件技术1班', 1, '银杏', 1, '330000', '浙江省', '330100', '杭州市', '330106', '西湖区', '校园道路西侧', DATE_SUB(CURRENT_TIMESTAMP, INTERVAL 2 DAY), '叶扇形，秋叶金黄。', 'SUBMITTED', 0, NULL, 0, 0, DATE_SUB(CURRENT_TIMESTAMP, INTERVAL 1 HOUR)),
+(9002, 110, 1, '2022级软件技术1班', 1, '银杏', 1, '330000', '浙江省', '330100', '杭州市', '330106', '西湖区', '植物园入口', DATE_SUB(CURRENT_TIMESTAMP, INTERVAL 3 DAY), '已通过示例记录，用于展廊/地图断言。', 'APPROVED', 1, DATE_SUB(CURRENT_TIMESTAMP, INTERVAL 1 DAY), 1, 12, DATE_SUB(CURRENT_TIMESTAMP, INTERVAL 2 DAY)),
+(9003, 110, 1, '2022级软件技术1班', 2, '珙桐', 1, '440000', '广东省', '440100', '广州市', '440103', '荔湾区', '公园内', DATE_SUB(CURRENT_TIMESTAMP, INTERVAL 1 DAY), '珙桐苞片形似白鸽。', 'SUBMITTED', 0, NULL, 0, 0, DATE_SUB(CURRENT_TIMESTAMP, INTERVAL 30 MINUTE));
+
+INSERT INTO plant_photo (id, observation_id, uploader_id, file_name, file_url, file_size, mime_type, organ_type, is_cover, sort_order) VALUES
+(9101, 9001, 100, 'ginkgo-1.jpg', '/uploads/plant/test/9001.jpg', 1024, 'image/jpeg', 'WHOLE', 1, 0),
+(9102, 9002, 110, 'ginkgo-cover.jpg', '/uploads/plant/test/9002a.jpg', 1024, 'image/jpeg', 'WHOLE', 1, 0),
+(9103, 9002, 110, 'ginkgo-leaf.jpg', '/uploads/plant/test/9002b.jpg', 900, 'image/jpeg', 'LEAF', 0, 1),
+(9104, 9003, 110, 'dove-tree.jpg', '/uploads/plant/test/9003.jpg', 1024, 'image/jpeg', 'FLOWER', 1, 0);

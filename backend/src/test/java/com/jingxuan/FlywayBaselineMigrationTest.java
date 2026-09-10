@@ -53,7 +53,7 @@ class FlywayBaselineMigrationTest {
         MigrationInfo currentMigration = flyway.info().current();
         assertNotNull(currentMigration, "迁移完成后应存在当前版本");
         assertNotNull(currentMigration.getVersion(), "基线迁移应具有版本号");
-        assertEquals("5", currentMigration.getVersion().getVersion());
+        assertEquals("11", currentMigration.getVersion().getVersion());
         assertTrue(tableExists("flyway_schema_history"), "Flyway 应记录迁移历史");
         assertTrue(tableExists("sys_user"), "基础身份表应由基线创建");
         assertTrue(tableExists("work"), "作品主表应由基线创建");
@@ -65,6 +65,52 @@ class FlywayBaselineMigrationTest {
         assertTrue(columnExists("work_attachment", "sha256"), "附件元数据应保存内容 SHA-256 摘要");
         assertFalse(tableExists("work_runtime"), "仅含注释的历史占位脚本应被安全跳过");
         assertEquals(0, countUsers(), "生产 Flyway 基线不得创建默认登录账号");
+        assertEquals(3, countClassDictSeeds(), "V6 应为注册阶段写入 1班/2班/3班 班级字典");
+        assertTrue(tableExists("sys_region"), "V7 应创建行政区划表");
+        assertTrue(tableExists("plant_category"), "V7 应创建植物类别表");
+        assertTrue(tableExists("plant_species"), "V7 应创建标准物种表");
+        assertTrue(tableExists("plant_observation"), "V7 应创建观察记录表");
+        assertTrue(tableExists("plant_photo"), "V7 应创建观察照片表");
+        assertTrue(tableExists("plant_field_definition"), "V8 应创建动态描述项定义表");
+        assertTrue(tableExists("plant_field_value"), "V8 应创建动态描述值表");
+        assertTrue(tableExists("plant_review"), "V9 应创建教师审核历史表");
+        assertTrue(tableExists("plant_comment"), "V9 应创建评论表");
+        assertTrue(tableExists("plant_rating"), "V9 应创建星级评价表");
+        assertEquals(34, countRegionProvinces(), "V10 应写入 34 个省级行政区种子");
+        assertEquals(4, countActiveCategories(), "V10 应写入 4 个植物类别种子");
+        assertTrue(columnExists("sys_region", "center_lng"), "V11 应增加行政区可视化中心字段");
+        assertTrue(columnExists("sys_region", "center_lat"), "V11 应增加行政区可视化中心字段");
+        assertTrue(columnExists("sys_region", "min_lng"), "V11 应增加行政区范围字段");
+    }
+
+    private static int countClassDictSeeds() throws SQLException {
+        String sql = "SELECT COUNT(*) FROM sys_dict WHERE dict_type = 'class' AND deleted = 0";
+        try (Connection connection = MYSQL.createConnection("");
+             PreparedStatement statement = connection.prepareStatement(sql);
+             ResultSet resultSet = statement.executeQuery()) {
+            assertTrue(resultSet.next());
+            return resultSet.getInt(1);
+        }
+    }
+
+    private static int countRegionProvinces() throws SQLException {
+        String sql = "SELECT COUNT(*) FROM sys_region WHERE region_level = 'PROVINCE' AND deleted = 0";
+        try (Connection connection = MYSQL.createConnection("");
+             PreparedStatement statement = connection.prepareStatement(sql);
+             ResultSet resultSet = statement.executeQuery()) {
+            assertTrue(resultSet.next());
+            return resultSet.getInt(1);
+        }
+    }
+
+    private static int countActiveCategories() throws SQLException {
+        String sql = "SELECT COUNT(*) FROM plant_category WHERE enabled = 1 AND deleted = 0";
+        try (Connection connection = MYSQL.createConnection("");
+             PreparedStatement statement = connection.prepareStatement(sql);
+             ResultSet resultSet = statement.executeQuery()) {
+            assertTrue(resultSet.next());
+            return resultSet.getInt(1);
+        }
     }
 
     private static int countTables() throws SQLException {
