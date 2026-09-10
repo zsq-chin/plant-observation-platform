@@ -87,18 +87,18 @@ def check_mobile_map(page, base, out_dir):
     shot(page, "mobile-map.png", out_dir)
     check(info.get("hasCanvas") and info.get("w", 0) > 0, "手机地图渲染出 ECharts canvas")
     check(not info.get("fallback"), "未落入省份列表降级分支")
-    # 点击网格尝试命中省份
+    # 点击网格尝试命中省份（用页面文本判断，避免依赖会被改版调整的类名）
     box = page.locator(".china-map").bounding_box()
     clicked = False
+    text = ""
     for fx, fy in ((0.5, 0.45), (0.35, 0.6), (0.62, 0.62), (0.5, 0.3), (0.45, 0.75)):
         page.mouse.click(box["x"] + box["width"] * fx, box["y"] + box["height"] * fy)
-        page.wait_for_timeout(1200)
-        head = page.locator(".panel__head").count()
-        if head:
+        page.wait_for_timeout(1400)
+        text = page.inner_text("body")
+        if "收起" in text and "条观察" in text:
             clicked = True
             break
-    text = page.locator(".panel").inner_text() if page.locator(".panel").count() else ""
-    print("  点击后面板:", text.replace(chr(10), " ")[:120])
+    print("  点击后面板:", text.replace(chr(10), " ")[:140])
     check(clicked, "手机地图点击省份触发 select（面板展开）")
     shot(page, "mobile-map-selected.png", out_dir)
 
