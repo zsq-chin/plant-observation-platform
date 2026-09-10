@@ -127,6 +127,44 @@ with sync_playwright() as p:
     else:
         check(False, "PC 页面未暴露 __plantMap 实例")
 
+
+    # ---------------- 老客户端缓存污染回归 ----------------
+    print("== 缓存污染回归（模拟“曾经缓存过 33 省旧边界”的浏览器）==")
+    import json as _json
+    old_geo = _json.loads(open("frontend/public/geo/china-provinces.json", encoding="utf-8").read())
+    old_geo["features"] = [x for x in old_geo["features"]
+                           if str((x.get("properties") or {}).get("adcode") or x.get("id")) != "710000"]
+    old_body = _json.dumps(old_geo)
+    poisoned_hits = []
+
+    def poison(route):
+        url = route.request.url
+        if "?v=" in url:
+            route.continue_()
+            return
+        poisoned_hits.append(url)
+        route.fulfill(status=200, content_type="application/json", body=old_body,
+                      headers={"Cache-Control": "public, immutable, max-age=31536000"})
+
+    browser3 = p.chromium.launch()
+    ctx3 = browser3.new_context(viewport={"width": 1440, "height": 900})
+    page3 = ctx3.new_page()
+    page3.route("**/china-provinces.json*", poison)
+    page3.goto(PC_MAP, wait_until="domcontentloaded")
+    page3.wait_for_timeout(10000)
+    render2 = page3.evaluate("""() => {
+        const m = window.__plantMap;
+        if (!m || !m.queryRenderedFeatures) return null;
+        const fill = m.queryRenderedFeatures().filter(f => f.layer.id === 'province-fill');
+        return { renderedTaiwan: fill.some(f => String(f.id) === '710000') };
+    }""")
+    ctx3.close()
+    browser3.close()
+    print("  旧地址（无 ?v=）被请求次数:", len(poisoned_hits))
+    check(not poisoned_hits, "地图不再请求不带版本指纹的旧地址（旧缓存无法再被命中）")
+    check(bool(render2) and render2["renderedTaiwan"], "即使浏览器存有 33 省旧缓存，台湾省依然渲染")
+
+print()
 print()
 for n in notes:
     print("  说明:", n)
