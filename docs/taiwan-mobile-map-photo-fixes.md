@@ -111,3 +111,81 @@ ECharts 点击本身一直是正常的（日志可见命中 四川省 510000 / �
 
 - Capacitor 壳（当前 APK）加载的就是本 H5，逻辑与实测一致；如需**离线内置模式**需按 `capacitor.config.ts` 注释切换；
 - 若后续用 HBuilderX 打包 uni-app 原生 App，地图走 renderjs 分支，建议真机回归一次（点击省份 → 抽屉加载作品）。
+
+## 7. 复测仍然"看不到台湾省 / 手机图片"的两个真因（第二轮）
+
+第一轮修完后，作者本机复测**依旧**看不到台湾省、手机端**依旧**不显示已上传图片，
+而自动化验证（全新浏览器上下文）却全部通过。差异点不在代码，而在**缓存与 URL 解析**：
+
+### 7.1 台湾省：GeoJSON 被 nginx 当成长缓存资源，老浏览器一年都拿不到新数据
+
+    # 修复前的实测响应头
+    GET /jingxuan/geo/china-provinces.json
+    Cache-Control: public, immutable, max-age=31536000      ← 文件名不含内容哈希！
+
+    # 该文件的两次内容
+    b62e181  china-provinces.json  → 33 个省级要素，**没有 710000**
+    a0e7175  china-provinces.json  → 34 个省级要素，新增台湾省
+
+台湾省是**后补**进数据文件的，但 URL 一字未改，又被标成"一年不可变"。
+凡是先于 `a0e7175` 打开过地图的浏览器（作者本机、手机 WebView 都算），
+缓存里存的仍是 33 省的旧副本，服务端再改多少次都不会重新请求 —— 这正是
+"代码已修、自动化验证通过、本人却仍看不到"的原因。手机端 `static/geo/china-provinces.json`
+同理（uni-app 的 static 文件名同样不带哈希）。
+
+**修复（两层）**：
+
+1. 构建期把文件内容指纹注入请求地址，旧缓存条目直接失效：
+   - PC：`frontend/vite.config.ts` 用 sha1 计算 `public/geo/china-provinces.json` →
+     `__GEO_VERSION__`，`usePlantMap.ts` 请求 `geo/china-provinces.json?v=<指纹>`（实测 `?v=6b674985bb`）；
+   - App：`student-app/vite.config.ts` 对 `src/static/geo/china-provinces.json` 同样处理，
+     renderjs 请求 `static/geo/china-provinces.json?v=<指纹>`（实测 `?v=913ade7731`）。
+2. nginx（`frontend/nginx.conf`）为 `/geo/*.json` 单列协商缓存规则，
+   必须放在 `.js|css|json` 长缓存规则**之前**（nginx 正则 location 按出现顺序匹配）：
+
+       location ~* /geo/.*\.json$ {
+           add_header Cache-Control "no-cache, must-revalidate";
+           expires -1;
+       }
+
+   实测修复后响应头：`Cache-Control: no-cache, must-revalidate`。
+
+### 7.2 手机端图片：uni-app 的 <image> 会把 "/" 开头的路径按"应用根"解析
+
+    # 修复前，App 里真实发出的图片请求
+    GET /jingxuan/app/media/plants/thumbnail/<id>/<hash>.jpg   → 200 text/html   ← SPA 的 index.html
+    # 修复后
+    GET /media/plants/thumbnail/<id>/<hash>.jpg               → 200 image/jpeg
+
+`resolveMediaUrl()` 返回的是根绝对路径 `/media/plants/…`。普通 `<img>` 按域名根解析，
+但 **uni-app H5 的 `<image>` 组件会把以 "/" 开头的 src 当作"应用根"相对路径**：
+页面部署在 `/jingxuan/app/`，于是请求变成 `/jingxuan/app/media/plants/…`。
+该路径不存在，nginx 的 `try_files … /jingxuan/index.html` 回退成 **200 text/html** ——
+不是 404，所以既不报错也无法显示，排查时极易被"状态码 200"误导。
+
+实测对照（同一页面内）：
+
+    # 页面里创建的裸 <img>
+    img.src = '/media/plants/original/x/y.png'  →  http://10.120.46.175/media/plants/original/x/y.png   ✅
+    # uni-app <image> 渲染出的组件（同一路径）
+    网络面板实际请求                              →  http://10.120.46.175/jingxuan/app/media/plants/...  ❌
+
+**修复**：`student-app/src/config.ts` 新增 `pageOrigin()`（取 `window.location` 的
+`protocol//host`）与 `appBasePath()`；`getMediaOrigin()` 变为
+**本地设置 > 构建变量 > 当前页面源**，`resolveMediaUrl()` 与 `PLANT_PLACEHOLDER`
+一律输出**绝对地址**，不再把裸相对路径交给 `<image>`。
+
+同时定位到一个**误导性现场**：`/static/placeholder.svg` 单独用 curl 访问会返回
+`200 text/html`（同样是 SPA 回退），只有走 `<image>` 按应用根解析时才落到
+`/jingxuan/app/static/placeholder.svg`（200 image/svg+xml）；占位图现在也拼绝对地址，
+两种用法都正确。
+
+### 7.3 本轮新增校验
+
+`scripts/check-media-and-geo-urls.py`（真实浏览器，全部断言通过）：
+
+- App 图片请求前缀正确、全部 200 且 `Content-Type: image/*`、**没有一次回退到 text/html**；
+- 至少一个 `<uni-image>` 真正挂上了图片（`background-image` 实测为
+  `url("http://10.120.46.175/media/plants/original/…webp")`）；
+- PC 与 App 的地图边界请求都带 `?v=<指纹>`；
+- PC 边界数据 34 省、含 710000、几何为 MultiPolygon，且 `province-fill` 命中 710000。
