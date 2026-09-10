@@ -67,7 +67,8 @@ const HEIGHT_FACTOR = 9000
 
 /** 数据驱动高度：minHeight + sqrt(count)*factor，并做 clamp（V3 §29）。 */
 export function visualHeightOf(count: number): number {
-  if (count <= 0) return 2000
+  // 无公开观察 → 无柱体（0 高度），保证填充面可见、地图语义清晰
+  if (count <= 0) return 0
   const height = MIN_HEIGHT + Math.sqrt(count) * HEIGHT_FACTOR
   return Math.min(MAX_HEIGHT, Math.max(MIN_HEIGHT, height))
 }

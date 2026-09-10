@@ -44,6 +44,16 @@ const SMALL_PROVINCE_CODES = new Set(["110000", "120000", "310000", "810000", "8
 /** 低于该缩放级别时隐藏小面积省份标签，避免文字互相遮挡 */
 const LABEL_HIDE_ZOOM = 3.4
 
+/**
+ * 标签偏移（像素）：面积很小的省区（台湾、香港、澳门）如果标签居中，
+ * 会正好压住只有十余像素的本体，导致"看不到岛屿"（实测台湾岛被文字完全遮住）。
+ */
+const LABEL_OFFSETS: Record<string, [number, number]> = {
+  "710000": [0, -22],
+  "810000": [-16, -10],
+  "820000": [-16, 10],
+}
+
 export function usePlantMap() {
   let map: MlMap | null = null
   let geojson: ChinaGeoJson | null = null
@@ -91,11 +101,12 @@ export function usePlantMap() {
           [
             "step",
             ["number", ["get", "observationCount"], 0],
-            "#d8e7cc",
-            3, "#bfd9a6",
-            10, "#9cc47e",
-            30, "#74a95a",
-            100, "#4f8a44",
+            // 无数据省份也要与海面背景形成明显对比（此前 #d8e7cc 与背景色差仅 13，台湾岛肉眼难辨）
+            "#c6dfa8",
+            3, "#a9cf88",
+            10, "#86bb63",
+            30, "#639a4a",
+            100, "#3f7a36",
           ],
         ],
         "fill-opacity": 0.9,
@@ -116,8 +127,26 @@ export function usePlantMap() {
           "#e07b39",
           "#7fb069",
         ],
-        "fill-extrusion-height": ["number", ["get", "visualHeight"], 2000],
+        // 无公开观察的省份不生成柱体：否则被光照照亮的柱顶会盖住填充面，
+        // 使台湾等无数据省份在浅色背景上几乎不可见（实测色差仅 13）。
+        "fill-extrusion-height": [
+          "case",
+          ["==", ["number", ["get", "observationCount"], 0], 0],
+          0,
+          ["number", ["get", "visualHeight"], 2000],
+        ],
         "fill-extrusion-opacity": 0.9,
+      },
+    })
+    // 深色外描边 + 白色内描边：保证浅色填充与深色填充下省界都清晰（台湾/港澳等小区域尤其重要）
+    map.addLayer({
+      id: "province-outline",
+      type: "line",
+      source: "provinces",
+      paint: {
+        "line-color": "#3d5c2e",
+        "line-width": 2.2,
+        "line-opacity": 0.45,
       },
     })
     map.addLayer({
@@ -126,13 +155,13 @@ export function usePlantMap() {
       source: "provinces",
       paint: {
         "line-color": "#ffffff",
-        "line-width": 0.9,
+        "line-width": 1.4,
       },
     })
   }
 
   function layerIds(): string[] {
-    return ["province-fill", "province-extrusion", "province-border"]
+    return ["province-fill", "province-extrusion", "province-outline", "province-border"]
   }
 
   function featureAt(event: MapMouseEvent): { code: string; name: string } | null {
@@ -209,7 +238,7 @@ export function usePlantMap() {
     geojson = {
       ...geojson,
       features: geojson.features.map((feature) => {
-        const stat = byCode.get(String(feature.id))
+        const stat = byCode.get(featureCode(feature))
         if (!stat) return featureWithStats(feature, 0, 0, 0)
         return featureWithStats(feature, Number(stat.observationCount), Number(stat.speciesCount), Number(stat.studentCount))
       }),
@@ -291,7 +320,7 @@ export function usePlantMap() {
         setHoverState(code, false)
         callbacks.onHover?.(null)
       })
-      const marker = new MlMarker({ element, anchor: "center" })
+      const marker = new MlMarker({ element, anchor: "center", offset: LABEL_OFFSETS[code] ?? [0, 0] })
       marker.setLngLat([center.lng, center.lat]).addTo(map as MlMap)
       provinceLabels.push(marker)
     }
