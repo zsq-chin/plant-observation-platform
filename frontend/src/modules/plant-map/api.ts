@@ -1,6 +1,13 @@
 import request from "@/api/request"
 import { numberValue, type PageResult } from "@/api/plant"
-import type { ChinaStatRow, MapFilter, ProvinceVisual, SpeciesObsRow } from "./types"
+import type {
+  ChinaStatRow,
+  MapFeaturedWork,
+  MapFilter,
+  ProvinceVisual,
+  ProvinceWorkRow,
+  SpeciesObsRow,
+} from "./types"
 
 function unwrap<T>(payload: unknown): T {
   return (payload as { data: T }).data
@@ -34,6 +41,22 @@ export async function fetchSpeciesObservations(
     params: { provinceCode: provinceCode || undefined, page: 1, size: 50 },
   })) as { data: PageResult<SpeciesObsRow> }
   return payload.data.records
+}
+
+/** 全国地图精选作品（每省最多 1 条，§4.1）。 */
+export async function fetchFeaturedMapWorks(size = 8): Promise<MapFeaturedWork[]> {
+  return unwrap<MapFeaturedWork[]>(await request.get("/api/public/plant/map/featured-works", { params: { size } }))
+}
+
+/** 某省学生作品（点击省份后加载，§3.3/§7.3）。 */
+export async function fetchProvinceWorks(
+  provinceCode: string,
+  page = 1,
+  size = 12,
+): Promise<PageResult<ProvinceWorkRow>> {
+  return unwrap<PageResult<ProvinceWorkRow>>(
+    await request.get("/api/public/plant/map/provinces/" + provinceCode + "/works", { params: { page, size } }),
+  )
 }
 
 export function countOf(value: number | string | undefined): number {

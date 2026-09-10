@@ -39,11 +39,17 @@ function chinaBounds(): CameraTarget {
   return { west: 73, south: 17, east: 135.5, north: 54.5 }
 }
 
+/** 面积较小、低缩放级别下需要隐藏标签的省级行政区（下一步开发计划 §3.1） */
+const SMALL_PROVINCE_CODES = new Set(["110000", "120000", "310000", "810000", "820000"])
+/** 低于该缩放级别时隐藏小面积省份标签，避免文字互相遮挡 */
+const LABEL_HIDE_ZOOM = 3.4
+
 export function usePlantMap() {
   let map: MlMap | null = null
   let geojson: ChinaGeoJson | null = null
   let callbacks: PlantMapCallbacks = {}
   const regionMarkers: MlMarker[] = []
+  const provinceLabels: MlMarker[] = []
   let markerClick: ((payload: { region: RegionNode; index: number }) => void) | null = null
   let previousHoverCode: string | null = null
 
@@ -70,6 +76,8 @@ export function usePlantMap() {
       paint: {
         "fill-color": [
           "case",
+          ["boolean", ["feature-state", "featured"], false],
+          "#ffd166",
           ["boolean", ["feature-state", "hovered"], false],
           "#f5c542",
           ["boolean", ["feature-state", "selected"], false],
@@ -92,6 +100,8 @@ export function usePlantMap() {
       paint: {
         "fill-extrusion-color": [
           "case",
+          ["boolean", ["feature-state", "featured"], false],
+          "#ffcf5c",
           ["boolean", ["feature-state", "hovered"], false],
           "#f0b429",
           ["boolean", ["feature-state", "selected"], false],
@@ -176,6 +186,8 @@ export function usePlantMap() {
     })
     addProvinceLayers()
     bindEvents()
+    renderProvinceLabels()
+    instance.on("zoom", updateLabelVisibility)
   }
 
   function setStats(rows: ChinaStatRow[]) {
@@ -191,6 +203,91 @@ export function usePlantMap() {
     }
     const source = map.getSource("provinces") as { setData: (data: unknown) => void } | undefined
     source?.setData(geojson)
+  }
+
+  /** 省份中心点（取边界 bbox 中心，用于标签与引导线锚点）。 */
+  function provinceCenter(code: string): { lng: number; lat: number } | null {
+    const feature = featuresMap().get(code)
+    if (!feature) return null
+    const bounds = bboxOfFeature(feature)
+    if (!bounds) return null
+    return { lng: (bounds.west + bounds.east) / 2, lat: (bounds.south + bounds.north) / 2 }
+  }
+
+  /** 经纬度 → 屏幕坐标（精选作品引导线用）。 */
+  function project(lngLat: [number, number]): { x: number; y: number } | null {
+    if (!map) return null
+    const point = map.project(lngLat)
+    return { x: point.x, y: point.y }
+  }
+
+  /** 相机变化回调（移动/缩放后重算引导线），返回取消订阅函数。 */
+  function onCameraChange(handler: () => void): () => void {
+    if (!map) return () => undefined
+    map.on("move", handler)
+    map.on("zoom", handler)
+    return () => {
+      map?.off("move", handler)
+      map?.off("zoom", handler)
+    }
+  }
+
+  /** 精选作品所属省份高亮（卡片与地图联动）。 */
+  function setFeatured(codes: string[]) {
+    if (!map) return
+    const active = new Set(codes)
+    for (const key of featuresMap().keys()) {
+      map.setFeatureState({ source: "provinces", id: key }, { featured: active.has(key) })
+    }
+  }
+
+  /** 省份名称常驻标签（DOM 文本，随缩放自动显隐，低缩放隐藏小面积省份）。 */
+  function renderProvinceLabels() {
+    clearProvinceLabels()
+    if (!map || !geojson) return
+    for (const feature of geojson.features) {
+      const code = String(feature.id)
+      const center = provinceCenter(code)
+      if (!center) continue
+      const name = String(feature.properties?.name ?? "")
+      const element = document.createElement("button")
+      element.type = "button"
+      element.className = "plant-province-label"
+      element.dataset.code = code
+      element.textContent = name
+      element.title = name
+      element.addEventListener("click", (event) => {
+        event.stopPropagation()
+        callbacks.onProvinceClick?.(code, name, feature)
+      })
+      element.addEventListener("mouseenter", () => {
+        setHoverState(code, true)
+        callbacks.onHover?.(code, name)
+      })
+      element.addEventListener("mouseleave", () => {
+        setHoverState(code, false)
+        callbacks.onHover?.(null)
+      })
+      const marker = new MlMarker({ element, anchor: "center" })
+      marker.setLngLat([center.lng, center.lat]).addTo(map as MlMap)
+      provinceLabels.push(marker)
+    }
+    updateLabelVisibility()
+  }
+
+  function updateLabelVisibility() {
+    if (!map) return
+    const zoom = map.getZoom()
+    for (const marker of provinceLabels) {
+      const code = (marker.getElement() as HTMLElement).dataset.code ?? ""
+      const hidden = zoom < LABEL_HIDE_ZOOM && SMALL_PROVINCE_CODES.has(code)
+      marker.getElement().style.display = hidden ? "none" : ""
+    }
+  }
+
+  function clearProvinceLabels() {
+    for (const marker of provinceLabels) marker.remove()
+    provinceLabels.length = 0
   }
 
   function setHoverState(code: string | null, active: boolean) {
@@ -262,6 +359,7 @@ export function usePlantMap() {
 
   function destroy() {
     clearRegionMarkers()
+    clearProvinceLabels()
     if (map) {
       map.remove()
       map = null
@@ -280,6 +378,12 @@ export function usePlantMap() {
     flyChina,
     renderRegionMarkers,
     clearRegionMarkers,
+    renderProvinceLabels,
+    clearProvinceLabels,
+    provinceCenter,
+    project,
+    onCameraChange,
+    setFeatured,
     setMarkerClick(handler: ((payload: { region: RegionNode; index: number }) => void) | null) { markerClick = handler },
     getMap: () => map,
     getFeatureCount: () => (geojson ? geojson.features.length : 0),

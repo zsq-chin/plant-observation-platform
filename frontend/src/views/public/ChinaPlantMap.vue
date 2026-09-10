@@ -28,7 +28,7 @@
       <el-button size="small" link type="primary" @click="clearNationSpecies">清除</el-button>
     </div>
 
-    <div class="map-stage">
+    <div ref="stageRef" class="map-stage">
       <template v-if="mapSupported">
         <div v-show="!mapError" ref="mapContainerRef" class="map-canvas"></div>
         <div v-if="loadingStats" class="map-overlay map-overlay--center">地图数据加载中…</div>
@@ -36,11 +36,26 @@
           <p>{{ mapError }}</p>
           <el-button type="primary" @click="retryMount">重新加载</el-button>
         </div>
+
+        <FeaturedWorkOverlay
+          v-if="stage === 'CHINA_OVERVIEW' && featuredAnchors.length"
+          :items="featuredAnchors"
+          :size="mapSize"
+          :active-key="hoveredWorkKey"
+          :highlight-code="hovered ? hovered.code : null"
+          @hover="onCardHover"
+        />
+
         <div v-if="hovered && !selectedProvince" class="map-hover-tip">
           <b>{{ hovered.name }}</b>
           <template v-if="statsByCode[hovered.code]">
             <p>{{ countOf(statsByCode[hovered.code].observationCount) }} 条观察 · {{ countOf(statsByCode[hovered.code].speciesCount) }} 种植物</p>
           </template>
+          <p v-else>暂无公开观察</p>
+        </div>
+
+        <div v-if="stage === 'CHINA_OVERVIEW' && !featuredAnchors.length && featuredWorks.length === 0" class="map-featured-hint">
+          暂无精选作品（教师可在审核中把优秀观察设为精选）
         </div>
       </template>
       <div v-else class="map-fallback">
@@ -55,13 +70,38 @@
         </div>
       </div>
 
+      <!-- 右侧面板：默认展示该省作品，可切换到城市/物种可视化 -->
       <Transition name="panel">
-        <div v-if="stage !== 'CHINA_OVERVIEW' && (visual || visualLoading || visualError)" class="map-side">
-          <el-alert v-if="visualError" type="error" :closable="false" class="map-side__alert">
-            <template #title>{{ visualError }} <el-button size="small" link type="primary" @click="loadVisual()">重试</el-button></template>
-          </el-alert>
-          <ProvincePlantPanel v-if="visual" :visual="visual" :active-city="activeCity"
-            @close="backToChina" @open-species="openSpecies" @select-city="onSelectCity" />
+        <div v-if="stage !== 'CHINA_OVERVIEW' && !selectedSpecies" class="map-side">
+          <div class="map-side__switch">
+            <button type="button" :class="{ 'is-on': panelMode === 'works' }" @click="panelMode = 'works'">学生作品</button>
+            <button type="button" :class="{ 'is-on': panelMode === 'visual' }" @click="openVisualPanel">城市与物种</button>
+          </div>
+
+          <ProvinceWorkDrawer
+            v-if="panelMode === 'works'"
+            :province-code="selectedProvinceCode"
+            :province-name="selectedProvinceName"
+            :observation-count="provinceStat.observationCount"
+            :species-count="provinceStat.speciesCount"
+            :student-count="provinceStat.studentCount"
+            :works="provinceWorks"
+            :loading="worksLoading"
+            :error="worksError"
+            :total="worksTotal"
+            @close="backToChina"
+            @load-more="loadMoreWorks"
+            @retry="loadProvinceWorks(true)"
+          />
+
+          <template v-else>
+            <el-alert v-if="visualError" type="error" :closable="false" class="map-side__alert">
+              <template #title>{{ visualError }} <el-button size="small" link type="primary" @click="loadVisual()">重试</el-button></template>
+            </el-alert>
+            <ProvincePlantPanel v-if="visual" :visual="visual" :active-city="activeCity"
+              @close="backToChina" @open-species="openSpecies" @select-city="onSelectCity" />
+            <div v-else-if="visualLoading" class="map-side__loading">省级统计加载中…</div>
+          </template>
         </div>
       </Transition>
 
@@ -72,7 +112,7 @@
         </div>
       </Transition>
     </div>
-    <p class="map-compliance">地图按学生主动选择的省、市、区县聚合展示，不读取学生设备定位；节点不代表精确采集位置；省份高度表示公开观察数量，不代表地形高度。</p>
+    <p class="map-compliance">地图按学生主动选择的省、市、区县聚合展示，不读取学生设备定位；节点不代表精确采集位置；省份高度表示公开观察数量，不代表地形高度。公开展示使用学生花名。</p>
   </div>
 </template>
 
@@ -83,16 +123,35 @@ import "maplibre-gl/dist/maplibre-gl.css"
 import { fetchCategories, fetchProvinces, fetchPublicClasses, type CategoryItem, type ClassItem, type RegionItem } from "@/api/plant"
 import MapFilterBar from "@/modules/plant-map/components/MapFilterBar.vue"
 import ProvincePlantPanel from "@/modules/plant-map/components/ProvincePlantPanel.vue"
+import ProvinceWorkDrawer from "@/modules/plant-map/components/ProvinceWorkDrawer.vue"
 import SpeciesObservationDrawer from "@/modules/plant-map/components/SpeciesObservationDrawer.vue"
-import { countOf, fetchChinaStats, fetchProvinceVisual, fetchSpeciesObservations } from "@/modules/plant-map/api"
+import FeaturedWorkOverlay from "@/modules/plant-map/components/FeaturedWorkOverlay.vue"
+import {
+  countOf,
+  fetchChinaStats,
+  fetchFeaturedMapWorks,
+  fetchProvinceVisual,
+  fetchProvinceWorks,
+  fetchSpeciesObservations,
+} from "@/modules/plant-map/api"
 import { isWebGlSupported, prefersReducedMotion, usePlantMap, type PlantMapCallbacks } from "@/modules/plant-map/composables/usePlantMap"
 import { parseMapQuery, type MapStage } from "@/modules/plant-map/utils/mapState"
 import { resolveMediaUrl } from "@/utils/media"
-import type { ChinaStatRow, MapFilter, ProvinceVisual, RegionNode, SpeciesObsRow, TopSpeciesItem } from "@/modules/plant-map/types"
+import type {
+  ChinaStatRow,
+  MapFeaturedWork,
+  MapFilter,
+  ProvinceVisual,
+  ProvinceWorkRow,
+  RegionNode,
+  SpeciesObsRow,
+  TopSpeciesItem,
+} from "@/modules/plant-map/types"
 
 const route = useRoute()
 const router = useRouter()
 
+const stageRef = ref<HTMLElement | null>(null)
 const mapContainerRef = ref<HTMLElement | null>(null)
 const filterBarRef = ref<InstanceType<typeof MapFilterBar> | null>(null)
 
@@ -113,17 +172,44 @@ const visualError = ref("")
 const speciesRows = ref<SpeciesObsRow[]>([])
 const speciesLoading = ref(false)
 const activeCity = ref<string | null>(null)
+const panelMode = ref<"works" | "visual">("works")
 const urlState = parseMapQuery(route.query)
 const stage = ref<MapStage>("CHINA_OVERVIEW")
 const nationSpecies = ref<string | null>(urlState.speciesFilter || null)
 const nationSpeciesName = ref<string | null>(null)
 
+// 全国精选作品与引导线
+const featuredWorks = ref<MapFeaturedWork[]>([])
+const featuredAnchors = ref<Array<{ key: string; provinceCode: string; anchor: { x: number; y: number }; work: MapFeaturedWork }>>([])
+const hoveredWorkKey = ref<string | null>(null)
+const mapSize = reactive({ width: 0, height: 0 })
+
+// 省份作品
+const provinceWorks = ref<ProvinceWorkRow[]>([])
+const worksTotal = ref(0)
+const worksLoading = ref(false)
+const worksError = ref("")
+const worksPage = ref(1)
+const PROVINCE_WORK_PAGE_SIZE = 12
+
 const filter = reactive<MapFilter>({})
 let requestSeq = 0
 let visualController: AbortController | null = null
 let mounted = false
+let unsubscribeCamera: (() => void) | null = null
+let resizeObserver: ResizeObserver | null = null
 
 const selectedProvinceName = computed(() => selectedProvince.value?.name || "")
+const selectedProvinceCode = computed(() => selectedProvince.value?.code || "")
+const provinceStat = computed(() => {
+  const code = selectedProvinceCode.value
+  const row = code ? statsByCode.value[code] : undefined
+  return {
+    observationCount: row ? countOf(row.observationCount) : 0,
+    speciesCount: row ? countOf(row.speciesCount) : 0,
+    studentCount: row ? countOf(row.studentCount) : 0,
+  }
+})
 
 const statsByCode = computed(() => {
   const map: Record<string, ChinaStatRow> = {}
@@ -149,14 +235,91 @@ async function loadStats() {
   loadingStats.value = true
   try {
     const params: MapFilter = { ...filter }
-if (nationSpecies.value) params.speciesId = nationSpecies.value
-statsRows.value = await fetchChinaStats(params)
+    if (nationSpecies.value) params.speciesId = nationSpecies.value
+    statsRows.value = await fetchChinaStats(params)
     if (mounted) plantMap.setStats(statsRows.value)
   } catch {
     statsRows.value = []
   } finally {
     loadingStats.value = false
   }
+}
+
+/** 全国精选作品（每省 1 条）→ 计算屏幕锚点 → 地图高亮 */
+async function loadFeaturedWorks() {
+  try {
+    featuredWorks.value = await fetchFeaturedMapWorks(8)
+  } catch {
+    featuredWorks.value = []
+  }
+  computeFeaturedAnchors()
+}
+
+function computeFeaturedAnchors() {
+  if (!featuredWorks.value.length) {
+    featuredAnchors.value = []
+    return
+  }
+  const anchors: typeof featuredAnchors.value = []
+  for (const work of featuredWorks.value) {
+    const code = String(work.provinceCode || "")
+    if (!code) continue
+    const center = plantMap.provinceCenter(code)
+    if (!center) continue
+    const point = plantMap.project([center.lng, center.lat])
+    if (!point) continue
+    anchors.push({ key: String(work.observationId), provinceCode: code, anchor: { x: point.x, y: point.y }, work })
+  }
+  featuredAnchors.value = anchors
+  plantMap.setFeatured(anchors.map((item) => item.provinceCode))
+}
+
+function updateMapSize() {
+  const element = mapContainerRef.value
+  if (!element) return
+  mapSize.width = element.clientWidth
+  mapSize.height = element.clientHeight
+}
+
+function onCardHover(key: string | null) {
+  hoveredWorkKey.value = key
+  const hit = featuredAnchors.value.find((item) => item.key === key)
+  if (hit) {
+    plantMap.setHoverState(hit.provinceCode, true)
+  } else {
+    for (const item of featuredAnchors.value) plantMap.setHoverState(item.provinceCode, false)
+  }
+}
+
+async function loadProvinceWorks(reset = true) {
+  const province = selectedProvince.value
+  if (!province) return
+  const code = province.code
+  if (reset) {
+    provinceWorks.value = []
+    worksTotal.value = 0
+    worksPage.value = 1
+  }
+  worksLoading.value = true
+  worksError.value = ""
+  try {
+    const result = await fetchProvinceWorks(code, worksPage.value, PROVINCE_WORK_PAGE_SIZE)
+    if (selectedProvince.value?.code !== code) return
+    provinceWorks.value = reset ? result.records : provinceWorks.value.concat(result.records)
+    worksTotal.value = Number(result.total || 0)
+  } catch {
+    if (selectedProvince.value?.code === code) {
+      worksError.value = province.name + " 作品加载失败"
+    }
+  } finally {
+    if (selectedProvince.value?.code === code) worksLoading.value = false
+  }
+}
+
+function loadMoreWorks() {
+  if (worksLoading.value) return
+  worksPage.value += 1
+  loadProvinceWorks(false)
 }
 
 async function loadVisual() {
@@ -177,6 +340,11 @@ async function loadVisual() {
   } finally {
     if (seq === requestSeq) visualLoading.value = false
   }
+}
+
+function openVisualPanel() {
+  panelMode.value = "visual"
+  if (!visual.value && !visualLoading.value) loadVisual()
 }
 
 function renderNodes(regions: RegionNode[]) {
@@ -209,9 +377,11 @@ async function handleProvinceClick(code: string, name: string) {
   visual.value = null
   visualError.value = ""
   activeCity.value = null
+  panelMode.value = "works"
   plantMap.setSelected(code)
   stage.value = "PROVINCE_FLYING"
   syncUrl()
+  loadProvinceWorks(true)
   const bounds = plantMap.boundsOf(code)
   if (bounds) {
     await plantMap.flyToBounds(bounds, cameraDuration())
@@ -220,7 +390,6 @@ async function handleProvinceClick(code: string, name: string) {
   }
   if (selectedProvince.value?.code === code) {
     stage.value = "PROVINCE_OVERVIEW"
-    loadVisual()
   }
 }
 
@@ -255,15 +424,22 @@ async function backToChina() {
   selectedProvince.value = null
   selectedSpecies.value = null
   speciesRows.value = []
+  provinceWorks.value = []
+  worksTotal.value = 0
+  worksError.value = ""
   visual.value = null
   visualError.value = ""
   activeCity.value = null
+  panelMode.value = "works"
   plantMap.setSelected(null)
   plantMap.clearRegionMarkers()
   stage.value = "RETURNING"
   syncUrl()
   await plantMap.flyChina(cameraDuration())
-  if (!selectedProvince.value) stage.value = "CHINA_OVERVIEW"
+  if (!selectedProvince.value) {
+    stage.value = "CHINA_OVERVIEW"
+    computeFeaturedAnchors()
+  }
 }
 
 function syncUrl() {
@@ -284,7 +460,8 @@ function onApplyFilter() {
   syncUrl()
   loadStats()
   if (selectedProvince.value) {
-    loadVisual()
+    if (panelMode.value === "visual") loadVisual()
+    if (panelMode.value === "works") loadProvinceWorks(true)
   }
 }
 
@@ -301,6 +478,15 @@ async function mountMap() {
     await plantMap.mount(mapContainerRef.value, callbacks)
     mounted = true
     plantMap.setStats(statsRows.value)
+    updateMapSize()
+    computeFeaturedAnchors()
+    unsubscribeCamera = plantMap.onCameraChange(() => {
+      if (stage.value === "CHINA_OVERVIEW") computeFeaturedAnchors()
+    })
+    if (typeof ResizeObserver !== "undefined" && stageRef.value) {
+      resizeObserver = new ResizeObserver(() => updateMapSize())
+      resizeObserver.observe(stageRef.value)
+    }
     if (urlState.province) {
       const name = provinces.value.find((p) => p.regionCode === urlState.province)?.regionName || urlState.province
       handleProvinceClick(urlState.province, name)
@@ -318,10 +504,13 @@ onMounted(async () => {
   await loadOptions()
   await loadStats()
   await mountMap()
+  await loadFeaturedWorks()
 })
 
 onBeforeUnmount(() => {
   visualController?.abort()
+  unsubscribeCamera?.()
+  resizeObserver?.disconnect()
   plantMap.destroy()
 })
 </script>
@@ -337,8 +526,13 @@ onBeforeUnmount(() => {
 .map-overlay--error { display: flex; flex-direction: column; gap: 10px; align-items: center; }
 .map-hover-tip { position: absolute; z-index: 5; top: 12px; left: 12px; padding: 8px 12px; border-radius: 10px; background: rgba(255, 255, 255, 0.92); color: #333; font-size: 13px; pointer-events: none; }
 .map-hover-tip p { margin: 2px 0 0; color: #666; }
-.map-side { position: absolute; top: 12px; right: 12px; bottom: 12px; z-index: 6; padding: 16px; border-radius: 16px; background: color-mix(in srgb, var(--card-bg) 94%, transparent); backdrop-filter: blur(8px); overflow: auto; border: 1px solid var(--border-subtle); }
-.map-drawer { position: absolute; top: 12px; right: 12px; bottom: 12px; z-index: 7; padding: 16px; border-radius: 16px; background: color-mix(in srgb, var(--card-bg) 96%, transparent); backdrop-filter: blur(8px); overflow: auto; border: 1px solid var(--border-subtle); }
+.map-featured-hint { position: absolute; z-index: 5; bottom: 14px; left: 50%; transform: translateX(-50%); padding: 6px 14px; border-radius: 999px; background: rgba(255, 255, 255, 0.9); color: #666; font-size: 12px; }
+.map-side { position: absolute; top: 12px; right: 12px; bottom: 12px; width: min(420px, 42vw); z-index: 6; padding: 14px; border-radius: 16px; background: color-mix(in srgb, var(--card-bg) 95%, transparent); backdrop-filter: blur(8px); overflow: auto; border: 1px solid var(--border-subtle); }
+.map-side__switch { display: flex; gap: 6px; margin-bottom: 10px; }
+.map-side__switch button { flex: 1; padding: 6px 8px; border-radius: 999px; border: 1px solid var(--border-subtle); background: transparent; color: var(--text-secondary); font-size: 12px; cursor: pointer; }
+.map-side__switch button.is-on { background: #2f6b31; border-color: #2f6b31; color: #fff; }
+.map-side__loading { padding: 16px 4px; color: var(--text-muted); font-size: 13px; }
+.map-drawer { position: absolute; top: 12px; right: 12px; bottom: 12px; width: min(420px, 42vw); z-index: 7; padding: 16px; border-radius: 16px; background: color-mix(in srgb, var(--card-bg) 96%, transparent); backdrop-filter: blur(8px); overflow: auto; border: 1px solid var(--border-subtle); }
 .map-side__alert { margin-bottom: 10px; }
 .map-fallback { padding: 20px; overflow: auto; height: 100%; }
 .map-fallback__note { color: var(--text-muted); }
@@ -355,12 +549,12 @@ onBeforeUnmount(() => {
 .panel-enter-from, .panel-leave-to { opacity: 0; transform: translateX(40px); }
 @media (max-width: 720px) {
   .map-stage { height: 70vh; }
-  .map-side, .map-drawer { top: auto; bottom: 0; left: 0; right: 0; max-height: 46vh; border-radius: 18px 18px 0 0; }
+  .map-side, .map-drawer { top: auto; bottom: 0; left: 0; right: 0; width: auto; max-height: 52vh; border-radius: 18px 18px 0 0; }
 }
 </style>
 
 <style>
-/* 地图 Marker（动态 DOM，需全局样式） */
+/* 地图 Marker 与省份标签（动态 DOM，需全局样式） */
 .plant-region-node {
   display: flex; flex-direction: column; align-items: center; gap: 2px;
   border: none; background: transparent; cursor: pointer; padding: 0;
@@ -373,4 +567,15 @@ onBeforeUnmount(() => {
 .plant-region-node__name { font-size: 12px; font-weight: 700; background: rgba(255, 255, 255, 0.9); border-radius: 999px; padding: 1px 8px; color: #333; white-space: nowrap; }
 .plant-region-node__count { font-size: 11px; color: #3d6b2e; background: rgba(255, 255, 255, 0.85); border-radius: 999px; padding: 0 6px; }
 .plant-region-node:hover .plant-region-node__img { transform: scale(1.08); }
+
+/* 省份名称常驻标签（DOM 文本，无需地图字体依赖；描边保证 3D 背景下可读） */
+.plant-province-label {
+  border: none; background: transparent; cursor: pointer; padding: 0;
+  font-size: 12px; font-weight: 700; line-height: 1.2; color: #1f3d18;
+  text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, 0 1px 2px rgba(0, 0, 0, 0.25);
+  transition: transform 0.15s ease, color 0.15s ease;
+  white-space: nowrap;
+}
+.plant-province-label:hover { color: #b8791a; transform: scale(1.12); }
+@media (max-width: 720px) { .plant-province-label { font-size: 10px; } }
 </style>
