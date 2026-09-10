@@ -1,0 +1,290 @@
+<template>
+  <view class="page">
+    <view class="sec">照片（{{ photos.length }}/10）· 点按照片可设封面/排序/改器官/删除</view>
+    <view class="grid">
+      <view v-for="(p, i) in photos" :key="String(p.photoId || p.fileUrl)" class="cell" @tap="openPhotoMenu(i)">
+        <image :src="resolveMediaUrl(p.fileUrl)" mode="aspectFill" class="photo" />
+        <text v-if="p.isCover" class="cover-badge">封面</text>
+        <text v-if="organLabel(p.organType)" class="organ-badge">{{ organLabel(p.organType) }}</text>
+        <text class="del" @tap.stop="removePhoto(p)">×</text>
+      </view>
+      <view v-if="photos.length < 10" class="cell add" @tap="pickMore">＋</view>
+    </view>
+    <view class="sec">植物</view>
+    <input class="ipt" v-model="speciesKeyword" placeholder="搜索银杏/桂花…" @input="searchSpecies" />
+    <view v-if="speciesOptions.length" class="species-list">
+      <view v-for="s in speciesOptions" :key="String(s.id)" class="species-item" @tap="chooseSpecies(s)">
+        {{ s.commonName }}<text v-if="s.scientificName" class="muted">（{{ s.scientificName }}）</text>
+      </view>
+    </view>
+    <view class="flex">
+      <label class="check"><switch :checked="unknownPlant" @change="unknownPlant = $event.detail.value" /><text>未知植物（待鉴定）</text></label>
+    </view>
+    <view class="sec">地点与时间</view>
+    <RegionPicker :location-text="form.locationText" @update:location="form.locationText = $event" @region="onRegion" />
+    <picker mode="date" @change="form.observedAt = $event.detail.value">
+      <view class="ipt">{{ form.observedAt || '选择观察日期' }}</view>
+    </picker>
+    <view class="sec">基础描述</view>
+    <textarea class="ipt area" v-model="form.description" placeholder="形态/生境/发现经过…" />
+    <view class="sec">动态描述项</view>
+    <DynamicPlantForm :fields="fields" :model="fieldValues" />
+    <view class="actions">
+      <button size="mini" @tap="saveOnly">保存草稿</button>
+      <button size="mini" type="primary" :loading="submitting" @tap="submitNow">提交审核</button>
+    </view>
+  </view>
+</template>
+
+<script setup lang="ts">
+import { onLoad } from "@dcloudio/uni-app"
+import { reactive, ref } from "vue"
+import { useAuthStore } from "@/stores/auth"
+import { chooseAndCompressImages } from "@/api/request"
+import {
+  createObservation, deletePhoto, fetchPlantFields, myObservationDetail,
+  myObservationPhotos, reorderPhotos, searchSpecies, setCoverPhoto, submitObservation,
+  updateObservation, updatePhotoOrgan, uploadPhoto,
+} from "@/api/plant"
+import RegionPicker from "@/components/RegionPicker.vue"
+import DynamicPlantForm from "@/components/DynamicPlantForm.vue"
+import { resolveMediaUrl } from "@/utils/media"
+import type { FieldDef, PhotoItem, SpeciesItem } from "@/types/models"
+
+const auth = useAuthStore()
+const id = ref<string | null>(null)
+const photos = ref<PhotoItem[]>([])
+const fields = ref<FieldDef[]>([])
+const fieldValues = reactive<Record<string, unknown>>({})
+const speciesOptions = ref<SpeciesItem[]>([])
+const speciesKeyword = ref("")
+const unknownPlant = ref(false)
+const submitting = ref(false)
+const form = reactive<Record<string, unknown>>({
+  speciesId: null,
+  reportedCommonName: "",
+  provinceCode: null,
+  cityCode: null,
+  districtCode: null,
+  locationText: "",
+  observedAt: "",
+  description: "",
+})
+
+onLoad(async (query) => {
+  if (!auth.isLoggedIn) return uni.reLaunch({ url: "/pages/login/index" })
+  if (query && query.id) {
+    id.value = String(query.id)
+    await loadExisting(id.value)
+  }
+  fields.value = await fetchPlantFields().catch(() => [])
+  for (const f of fields.value) {
+    if (fieldValues[f.id] === undefined) {
+      fieldValues[f.id] = f.fieldType === "MULTI_SELECT" ? [] : f.fieldType === "BOOLEAN" ? false : ""
+    }
+  }
+})
+
+async function loadExisting(obsId: string) {
+  const detail = await myObservationDetail(obsId).catch(() => null)
+  if (detail) {
+    Object.assign(form, {
+      speciesId: detail.speciesId || null,
+      reportedCommonName: detail.reportedCommonName || "",
+      provinceCode: detail.provinceCode || null,
+      cityCode: detail.cityCode || null,
+      districtCode: detail.districtCode || null,
+      locationText: detail.locationText || "",
+      observedAt: detail.observedAt ? String(detail.observedAt).slice(0, 10) : "",
+      description: detail.description || "",
+    })
+  }
+  photos.value = await myObservationPhotos(obsId).catch(() => [])
+}
+
+function onRegion(value: Record<string, unknown>) {
+  Object.assign(form, value)
+}
+
+async function searchSpecies() {
+  if (!speciesKeyword.value.trim()) {
+    speciesOptions.value = []
+    return
+  }
+  const result = await searchSpecies(speciesKeyword.value.trim()).catch(() => null)
+  speciesOptions.value = result ? result.records.slice(0, 6) : []
+}
+
+function chooseSpecies(s: SpeciesItem) {
+  form.speciesId = s.id
+  form.reportedCommonName = s.commonName
+  speciesKeyword.value = s.commonName
+  speciesOptions.value = []
+}
+
+async function pickMore() {
+  const paths = await chooseAndCompressImages(10 - photos.value.length, "album").catch(() => [])
+  if (!id.value) {
+    uni.showToast({ title: "请先保存一次草稿再补图", icon: "none" })
+    return
+  }
+  for (const file of paths) {
+    await uploadPhoto(String(id.value), file, "WHOLE").catch(() => undefined)
+  }
+  photos.value = await myObservationPhotos(id.value).catch(() => photos.value)
+}
+
+const organOptions = [
+  { value: "WHOLE", label: "全株" },
+  { value: "LEAF", label: "叶" },
+  { value: "FLOWER", label: "花" },
+  { value: "FRUIT", label: "果实" },
+  { value: "BARK", label: "树皮" },
+  { value: "SEED", label: "种子" },
+  { value: "OTHER", label: "其他" },
+]
+
+function organLabel(type?: string | null) {
+  const hit = organOptions.find((o) => o.value === type)
+  return hit ? hit.label : ""
+}
+
+async function refreshPhotos() {
+  if (!id.value) return
+  photos.value = await myObservationPhotos(id.value).catch(() => photos.value)
+}
+
+function openPhotoMenu(index: number) {
+  const p = photos.value[index]
+  if (!p || !p.photoId) {
+    uni.showToast({ title: "该照片尚未同步，请稍后操作", icon: "none" })
+    return
+  }
+  uni.showActionSheet({
+    itemList: p.isCover ? ["设为封面（已是封面）", "修改器官标签", "上移一位", "下移一位", "删除"] : ["设为封面", "修改器官标签", "上移一位", "下移一位", "删除"],
+    success: (res) => {
+      if (res.tapIndex === 0 && !p.isCover) {
+        setCoverPhoto(String(id.value), String(p.photoId)).then(refreshPhotos).catch(() => undefined)
+      } else if (res.tapIndex === 1) {
+        pickOrganFor(p)
+      } else if (res.tapIndex === 2 || res.tapIndex === 3) {
+        movePhoto(index, res.tapIndex === 2 ? -1 : 1)
+      } else if (res.tapIndex === 4) {
+        removePhoto(p)
+      }
+    },
+    fail: () => undefined,
+  })
+}
+
+function pickOrganFor(p: PhotoItem) {
+  const current = organOptions.findIndex((o) => o.value === p.organType)
+  uni.showActionSheet({
+    itemList: organOptions.map((o) => o.label),
+    success: (res) => {
+      const organ = organOptions[res.tapIndex]
+      if (organ) {
+        const idStr = String(id.value)
+        const pid = String(p.photoId)
+        updatePhotoOrgan(idStr, pid, organ.value)
+          .then(() => {
+            uni.showToast({ title: "器官已更新为" + organ.label, icon: "none" })
+            p.organType = organ.value
+          })
+          .catch(() => undefined)
+      }
+    },
+    fail: () => undefined,
+  })
+}
+
+function movePhoto(index: number, delta: number) {
+  const target = index + delta
+  if (target < 0 || target >= photos.value.length || !id.value) return
+  const arr = [...photos.value]
+  const [item] = arr.splice(index, 1)
+  arr.splice(target, 0, item)
+  photos.value = arr
+  const ids = arr.map((x) => String(x.photoId)).filter(Boolean)
+  reorderPhotos(String(id.value), ids).catch(() => undefined)
+}
+
+async function removePhoto(p: PhotoItem) {
+  if (id.value && p.photoId) {
+    await deletePhoto(id.value, String(p.photoId)).catch(() => undefined)
+    photos.value = await myObservationPhotos(id.value).catch(() => [])
+  }
+}
+
+function buildFieldValues() {
+  return fields.value
+    .filter((f) => fieldValues[f.id] !== undefined && fieldValues[f.id] !== "" && fieldValues[f.id] !== false)
+    .map((f) => ({
+      fieldId: f.id,
+      valueText: Array.isArray(fieldValues[f.id]) ? (fieldValues[f.id] as string[]).join(",") : String(fieldValues[f.id]),
+    }))
+}
+
+function buildBody() {
+  return {
+    speciesId: form.speciesId ? String(form.speciesId) : null,
+    reportedCommonName: (form.reportedCommonName as string) || null,
+    provinceCode: form.provinceCode || null,
+    cityCode: form.cityCode || null,
+    districtCode: form.districtCode || null,
+    locationText: (form.locationText as string) || null,
+    observedAt: form.observedAt ? String(form.observedAt) + " 00:00:00" : null,
+    description: (form.description as string) || null,
+    fieldValues: buildFieldValues(),
+    unknownPlant: unknownPlant.value || false,
+  }
+}
+
+async function saveOnly() {
+  try {
+    if (id.value) {
+      await updateObservation(id.value, buildBody())
+    } else {
+      const created = await createObservation(buildBody())
+      id.value = String(created.id)
+    }
+    uni.showToast({ title: "草稿已保存", icon: "success" })
+  } catch {
+    // 提示已由 request 层处理
+  }
+}
+
+async function submitNow() {
+  submitting.value = true
+  try {
+    await saveOnly()
+    if (id.value) {
+      await submitObservation(id.value)
+      uni.showToast({ title: "已提交审核", icon: "success" })
+      setTimeout(() => uni.switchTab({ url: "/pages/my-observations/index" }), 500)
+    }
+  } finally {
+    submitting.value = false
+  }
+}
+</script>
+
+<style scoped>
+.page { padding: 24rpx; display: flex; flex-direction: column; gap: 16rpx; }
+.sec { font-weight: 600; }
+.grid { display: flex; flex-wrap: wrap; gap: 12rpx; }
+.cell { width: 150rpx; height: 150rpx; position: relative; }
+.photo { width: 100%; height: 100%; border-radius: 12rpx; }
+.cover-badge { position: absolute; left: 4rpx; top: 4rpx; background: #e6a23c; color: #fff; font-size: 20rpx; padding: 2rpx 10rpx; border-radius: 999rpx; }
+.organ-badge { position: absolute; left: 4rpx; bottom: 4rpx; background: rgba(0,0,0,.55); color: #fff; font-size: 20rpx; padding: 2rpx 10rpx; border-radius: 999rpx; }
+.del { position: absolute; top: 4rpx; right: 8rpx; color: #fff; background: rgba(0,0,0,.5); border-radius: 50%; width: 36rpx; height: 36rpx; text-align: center; line-height: 36rpx; }
+.add { border: 2rpx dashed #aaa; border-radius: 12rpx; display: flex; align-items: center; justify-content: center; color: #666; }
+.ipt { border: 1rpx solid #ddd; border-radius: 10rpx; padding: 14rpx 16rpx; background: #fff; font-size: 28rpx; }
+.area { height: 160rpx; }
+.muted { color: #999; }
+.flex { display: flex; align-items: center; }
+.check { display: flex; align-items: center; gap: 8rpx; color: #555; }
+.species-list { border: 1rpx solid #ddd; border-radius: 10rpx; background: #fff; }
+.species-item { padding: 16rpx; border-bottom: 1rpx solid #f0f0f0; }
+.actions { display: flex; gap: 20rpx; margin-top: 12rpx; }
+</style>

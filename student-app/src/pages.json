@@ -1,0 +1,114 @@
+{
+  "pages": [
+    {
+      "path": "pages/login/index",
+      "style": {
+        "navigationBarTitleText": "登录"
+      }
+    },
+    {
+      "path": "pages/home/index",
+      "style": {
+        "navigationBarTitleText": "首页"
+      }
+    },
+    {
+      "path": "pages/gallery/index",
+      "style": {
+        "navigationBarTitleText": "植物展廊"
+      }
+    },
+    {
+      "path": "pages/capture/index",
+      "style": {
+        "navigationBarTitleText": "植物采集"
+      }
+    },
+    {
+      "path": "pages/observation-edit/index",
+      "style": {
+        "navigationBarTitleText": "补充观察"
+      }
+    },
+    {
+      "path": "pages/my-observations/index",
+      "style": {
+        "navigationBarTitleText": "我的植物"
+      }
+    },
+    {
+      "path": "pages/observation-detail/index",
+      "style": {
+        "navigationBarTitleText": "观察详情"
+      }
+    },
+    {
+      "path": "pages/map/index",
+      "style": {
+        "navigationBarTitleText": "全国植物"
+      }
+    },
+    {
+      "path": "pages/notification/index",
+      "style": {
+        "navigationBarTitleText": "消息"
+      }
+    },
+    {
+      "path": "pages/profile/index",
+      "style": {
+        "navigationBarTitleText": "我的"
+      }
+    },
+    {
+      "path": "pages/suggestion/index",
+      "style": {
+        "navigationBarTitleText": "新物种建议"
+      }
+    }
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "植物观察",
+    "navigationBarBackgroundColor": "#F7F9F4",
+    "backgroundColor": "#F7F9F4"
+  },
+  "tabBar": {
+    "color": "#7a7a7a",
+    "selectedColor": "#3f9b3f",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/home/index",
+        "text": "首页",
+        "iconPath": "static/logo.png",
+        "selectedIconPath": "static/logo.png"
+      },
+      {
+        "pagePath": "pages/gallery/index",
+        "text": "展廊",
+        "iconPath": "static/logo.png",
+        "selectedIconPath": "static/logo.png"
+      },
+      {
+        "pagePath": "pages/capture/index",
+        "text": "采集",
+        "iconPath": "static/logo.png",
+        "selectedIconPath": "static/logo.png"
+      },
+      {
+        "pagePath": "pages/my-observations/index",
+        "text": "我的植物",
+        "iconPath": "static/logo.png",
+        "selectedIconPath": "static/logo.png"
+      },
+      {
+        "pagePath": "pages/profile/index",
+        "text": "我的",
+        "iconPath": "static/logo.png",
+        "selectedIconPath": "static/logo.png"
+      }
+    ]
+  }
+}
