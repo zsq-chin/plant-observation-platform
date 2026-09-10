@@ -7,6 +7,16 @@ import com.jingxuan.modules.work.dto.*;
 
 import java.util.List;
 
+/**
+ * 旧作品域服务（Legacy Work）。
+ *
+ * <p>业务收口说明（《下一步开发计划：地图完善与旧功能收口》§5/§8）：
+ * 学生内容提交与公开展示已统一到 {@code PlantObservation}（植物观察），
+ * 前端学生端与公开端已不再调用旧作品页面与路由（MyWorks/WorkSubmit/WorkList/WorkDetail 已删除）。
+ *
+ * <p>本服务当前仅保留给仍在运行的旧域功能使用：教师评分、管理员内容审核、排行榜、待办、删除申请。
+ * 完整下线步骤与依赖清单见 {@code docs/legacy-work-retirement.md}。
+ */
 public interface WorkService extends IService<Work> {
 
     /**
