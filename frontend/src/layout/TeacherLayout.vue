@@ -41,6 +41,19 @@
           </el-menu-item>
         </el-menu>
 
+        <!-- 对外展示：新标签页打开，方便教师随时核对学生看到的展廊效果，不打断评审上下文 -->
+        <div class="teacher-layout__aside-label">对外展示</div>
+        <a class="teacher-layout__link" :href="galleryHref" target="_blank" rel="noopener">
+          <el-icon><Picture /></el-icon>
+          <span class="teacher-layout__link-text">植物展廊</span>
+          <el-icon class="teacher-layout__link-ext"><TopRight /></el-icon>
+        </a>
+        <a class="teacher-layout__link" :href="mapHref" target="_blank" rel="noopener">
+          <el-icon><MapLocation /></el-icon>
+          <span class="teacher-layout__link-text">全国植物地图</span>
+          <el-icon class="teacher-layout__link-ext"><TopRight /></el-icon>
+        </a>
+
         <div class="workspace-layout__section-note">
           深色主题下会切换到更接近夜间评审空间的阅读氛围，适合长时间查看材料与打分。
         </div>
@@ -89,7 +102,19 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Checked, CircleCheck, HomeFilled, Reading, EditPen, TrendCharts, Bell, ArrowDown } from '@element-plus/icons-vue'
+import {
+  ArrowDown,
+  Bell,
+  Checked,
+  CircleCheck,
+  EditPen,
+  HomeFilled,
+  MapLocation,
+  Picture,
+  Reading,
+  TopRight,
+  TrendCharts,
+} from '@element-plus/icons-vue'
 import { getUnreadCount } from '@/api/notify'
 import { useNotificationPolling } from '@/composables/useNotificationPolling'
 import AppThemeToggle from '@/components/AppThemeToggle.vue'
@@ -142,6 +167,10 @@ const pageDescription = computed(() => descriptions[route.path] || '面向评审
 
 const goNotify = () => router.push('/teacher/notify')
 
+/** 展廊 / 地图属于公开端页面，用真实链接新开标签页，保留教师端现场 */
+const galleryHref = router.resolve({ name: 'PlantGallery' }).href
+const mapHref = router.resolve({ name: 'ChinaPlantMap' }).href
+
 const logout = () => {
   clearAuthStorage()
   router.push('/login')
@@ -151,5 +180,47 @@ const logout = () => {
 <style scoped>
 .teacher-layout {
   --layout-accent: #6e3b46;
+}
+
+.teacher-layout__aside-label {
+  margin: 14px 0 6px;
+  padding: 0 20px;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+}
+
+.teacher-layout__link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 48px;
+  padding: 0 20px;
+  border-radius: 14px;
+  color: var(--text-primary);
+  font-size: 14px;
+  text-decoration: none;
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease;
+}
+
+.teacher-layout__link:hover {
+  background: color-mix(in srgb, var(--layout-accent) 10%, transparent);
+  transform: translateX(2px);
+}
+
+.teacher-layout__link .el-icon {
+  color: color-mix(in srgb, var(--layout-accent) 74%, var(--text-secondary));
+}
+
+.teacher-layout__link-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.teacher-layout__link-ext {
+  font-size: 13px;
+  opacity: 0.55;
 }
 </style>
