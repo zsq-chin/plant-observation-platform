@@ -17,9 +17,13 @@
             <el-icon><List /></el-icon>
             <span>我的待办</span>
           </el-menu-item>
-          <el-menu-item index="/student/works">
+          <el-menu-item index="/student/observations">
             <el-icon><Document /></el-icon>
-            <span>我的作品</span>
+            <span>我的植物观察</span>
+          </el-menu-item>
+          <el-menu-item index="/student/works">
+            <el-icon><Folder /></el-icon>
+            <span>旧·作品管理</span>
           </el-menu-item>
           <el-menu-item index="/student/ranking">
             <el-icon><Trophy /></el-icon>
@@ -83,7 +87,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/app/session/auth'
 import { getUnreadCount } from '@/api/notify'
 import { useNotificationPolling } from '@/composables/useNotificationPolling'
-import { ArrowDown, HomeFilled, List, Document, Trophy, Bell } from '@element-plus/icons-vue'
+import { ArrowDown, HomeFilled, List, Document, Folder, Trophy, Bell } from '@element-plus/icons-vue'
 import AppThemeToggle from '@/components/AppThemeToggle.vue'
 
 const route = useRoute()

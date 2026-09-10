@@ -78,6 +78,7 @@
 import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
+  Collection,
   Odometer,
   Finished,
   Notification,
@@ -129,6 +130,7 @@ const descriptions: Record<string, string> = {
 
 const adminMenuItems = [
   { index: '/admin/dashboard', label: '控制台', icon: Odometer },
+  { index: '/admin/plant', label: '植物平台', icon: Collection },
   { index: '/admin/audit', label: '审核管理', icon: Finished },
   { index: '/admin/notice', label: '公告管理', icon: Notification },
   { index: '/admin/comment', label: '评论管理', icon: ChatDotRound },
@@ -155,6 +157,7 @@ onUnmounted(() => {
 const pageTitle = computed(() => {
   const map: Record<string, string> = {
     '/admin/dashboard': '控制台',
+    '/admin/plant': '植物平台管理',
     '/admin/audit': '审核管理',
     '/admin/notice': '公告管理',
     '/admin/comment': '评论管理',

@@ -14,6 +14,12 @@ const adminRoutes: RouteRecordRaw[] = [
         meta: { title: '控制台' },
       },
       {
+        path: 'plant',
+        name: 'AdminPlantLibrary',
+        component: () => import('@/views/admin/plant/PlantLibrary.vue'),
+        meta: { title: '植物平台管理' },
+      },
+      {
         path: 'audit',
         name: 'AdminAudit',
         component: () => import('@/views/admin/audit/index.vue'),

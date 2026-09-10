@@ -2,14 +2,17 @@
   <div class="public-layout">
     <header class="public-header">
       <div class="public-header__inner">
-        <button class="public-brand" type="button" @click="router.push('/works')">
-          <span class="public-brand__eyebrow">Academy Curation</span>
-          <span class="public-brand__title">学院作品展示平台</span>
+        <button class="public-brand" type="button" @click="router.push('/plant')">
+          <span class="public-brand__eyebrow">National Plant Observation</span>
+          <span class="public-brand__title">全国植物观察与交流平台</span>
         </button>
 
         <nav class="public-nav">
-          <router-link class="nav-link" to="/works">作品展廊</router-link>
-          <router-link class="nav-link" to="/ranking">榜单与奖项</router-link>
+          <router-link class="nav-link" to="/plant">首页</router-link>
+          <router-link class="nav-link" to="/plant/gallery">植物展廊</router-link>
+          <router-link class="nav-link" to="/plant/map">中国地图</router-link>
+          <router-link class="nav-link" to="/plant/species">物种库</router-link>
+          <router-link class="nav-link" to="/works">旧版展廊</router-link>
         </nav>
 
         <div class="public-header__actions">
@@ -29,8 +32,8 @@
     <footer class="public-footer">
       <div class="public-footer__inner">
         <div>
-          <p class="public-footer__eyebrow">Curated Archive</p>
-          <p class="public-footer__title">学院作品展示平台</p>
+          <p class="public-footer__eyebrow">National Plant Observation</p>
+          <p class="public-footer__title">全国植物观察与交流平台</p>
         </div>
         <p class="public-footer__text">
           让课程成果、实验原型与成熟作品在同一套叙事里被看见，既是公开展示，也是持续归档。

@@ -26,6 +26,18 @@ const teacherRoutes: RouteRecordRaw[] = [
         meta: { title: '我的评分记录' },
       },
       {
+        path: 'suggestions',
+        name: 'PlantSuggestions',
+        component: () => import('@/views/teacher/PlantSuggestions.vue'),
+        meta: { title: '新物种建议' },
+      },
+      {
+        path: 'reviews',
+        name: 'PlantReviews',
+        component: () => import('@/views/teacher/PlantReviews.vue'),
+        meta: { title: '植物观察审核' },
+      },
+      {
         path: 'ranking',
         name: 'TeacherRanking',
         component: () => import('@/views/teacher/ranking/index.vue'),

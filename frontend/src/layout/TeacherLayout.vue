@@ -15,6 +15,14 @@
             <el-icon><HomeFilled /></el-icon>
             <span>工作台</span>
           </el-menu-item>
+          <el-menu-item index="/teacher/reviews">
+            <el-icon><Checked /></el-icon>
+            <span>植物观察审核</span>
+          </el-menu-item>
+          <el-menu-item index="/teacher/suggestions">
+            <el-icon><CircleCheck /></el-icon>
+            <span>新物种建议</span>
+          </el-menu-item>
           <el-menu-item index="/teacher/score">
             <el-icon><EditPen /></el-icon>
             <span>作品评分</span>
@@ -81,7 +89,7 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { HomeFilled, Reading, EditPen, TrendCharts, Bell, ArrowDown } from '@element-plus/icons-vue'
+import { Checked, CircleCheck, HomeFilled, Reading, EditPen, TrendCharts, Bell, ArrowDown } from '@element-plus/icons-vue'
 import { getUnreadCount } from '@/api/notify'
 import { useNotificationPolling } from '@/composables/useNotificationPolling'
 import AppThemeToggle from '@/components/AppThemeToggle.vue'

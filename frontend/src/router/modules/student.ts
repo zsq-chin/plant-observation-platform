@@ -50,6 +50,24 @@ const studentRoutes: RouteRecordRaw[] = [
         meta: { title: '作品详情' },
       },
       {
+        path: 'observations',
+        name: 'MyObservations',
+        component: () => import('@/views/student/MyObservations.vue'),
+        meta: { title: '我的植物观察' },
+      },
+      {
+        path: 'observations/create',
+        name: 'ObservationCreate',
+        component: () => import('@/views/student/ObservationEdit.vue'),
+        meta: { title: '新增植物观察' },
+      },
+      {
+        path: 'observations/edit/:id',
+        name: 'ObservationEdit',
+        component: () => import('@/views/student/ObservationEdit.vue'),
+        meta: { title: '编辑植物观察' },
+      },
+      {
         path: 'ranking',
         name: 'MyRanking',
         component: () => import('@/views/student/MyRanking.vue'),
