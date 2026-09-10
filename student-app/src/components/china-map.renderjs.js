@@ -10,7 +10,9 @@
  */
 import * as echarts from "echarts"
 
-const GEO_URL = "static/geo/china-provinces.json"
+// 地图边界内容指纹（构建期注入）；文件名不带哈希，靠查询串破长缓存
+const GEO_VERSION = typeof __GEO_VERSION__ === "string" ? __GEO_VERSION__ : "dev"
+const GEO_URL = "static/geo/china-provinces.json?v=" + GEO_VERSION
 
 export default {
   data() {

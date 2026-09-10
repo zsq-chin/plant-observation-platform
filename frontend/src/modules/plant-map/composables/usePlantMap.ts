@@ -20,7 +20,10 @@ export interface CameraTarget {
 }
 
 const APP_BASE = (import.meta.env.BASE_URL || "/").endsWith("/") ? import.meta.env.BASE_URL || "/" : (import.meta.env.BASE_URL || "/") + "/"
-const GEO_URL = APP_BASE + "geo/china-provinces.json"
+declare const __GEO_VERSION__: string
+/** 地图边界内容指纹（构建期注入）：文件名不带哈希，必须靠查询串破长缓存 */
+const GEO_VERSION = typeof __GEO_VERSION__ === "string" ? __GEO_VERSION__ : "dev"
+const GEO_URL = APP_BASE + "geo/china-provinces.json?v=" + GEO_VERSION
 
 export function isWebGlSupported(): boolean {
   try {
