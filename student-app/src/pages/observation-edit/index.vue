@@ -1,36 +1,60 @@
 <template>
   <view class="page">
-    <view class="sec">照片（{{ photos.length }}/10）· 点按照片可设封面/排序/改器官/删除</view>
-    <view class="grid">
-      <view v-for="(p, i) in photos" :key="String(p.photoId || p.fileUrl)" class="cell" @tap="openPhotoMenu(i)">
-        <image :src="resolveMediaUrl(p.fileUrl)" mode="aspectFill" class="photo" />
-        <text v-if="p.isCover" class="cover-badge">封面</text>
-        <text v-if="organLabel(p.organType)" class="organ-badge">{{ organLabel(p.organType) }}</text>
-        <text class="del" @tap.stop="removePhoto(p)">×</text>
+    <view class="card">
+      <view class="row">
+        <text class="h3">照片</text>
+        <text class="chip chip--brand">{{ photos.length }} / 10</text>
       </view>
-      <view v-if="photos.length < 10" class="cell add" @tap="pickMore">＋</view>
-    </view>
-    <view class="sec">植物</view>
-    <input class="ipt" v-model="speciesKeyword" placeholder="搜索银杏/桂花…" @input="doSearchSpecies" />
-    <view v-if="speciesOptions.length" class="species-list">
-      <view v-for="s in speciesOptions" :key="String(s.id)" class="species-item" @tap="chooseSpecies(s)">
-        {{ s.commonName }}<text v-if="s.scientificName" class="muted">（{{ s.scientificName }}）</text>
+      <text class="muted">点按照片可设封面 / 排序 / 改器官 / 删除</text>
+      <view class="grid">
+        <view v-for="(p, i) in photos" :key="String(p.photoId || p.fileUrl)" class="cell" @tap="openPhotoMenu(i)">
+          <image :src="resolveMediaUrl(p.fileUrl)" mode="aspectFill" class="photo" />
+          <text v-if="p.isCover" class="cover-badge">封面</text>
+          <text v-if="organLabel(p.organType)" class="organ-badge">{{ organLabel(p.organType) }}</text>
+          <text class="del" @tap.stop="removePhoto(p)">×</text>
+        </view>
+        <view v-if="photos.length < 10" class="cell add" @tap="pickMore"><text class="add__icon">＋</text></view>
       </view>
     </view>
-    <view class="flex">
-      <label class="check"><switch :checked="unknownPlant" @change="onUnknownChange" /><text>未知植物（待鉴定）</text></label>
+
+    <view class="card">
+      <text class="h3">植物</text>
+      <input class="ipt" v-model="speciesKeyword" placeholder="搜索 银杏 / 桂花…" @input="doSearchSpecies" />
+      <view v-if="speciesOptions.length" class="species-list">
+        <view v-for="s in speciesOptions" :key="String(s.id)" class="species-item" @tap="chooseSpecies(s)">
+          <text>{{ s.commonName }}</text>
+          <text v-if="s.scientificName" class="sci">{{ s.scientificName }}</text>
+        </view>
+      </view>
+      <label class="check">
+        <switch :checked="unknownPlant" @change="onUnknownChange" style="transform: scale(0.8)" />
+        <text class="check__text">未知植物（待鉴定）</text>
+      </label>
     </view>
-    <view class="sec">地点与时间</view>
-    <RegionPicker :location-text="String(form.locationText || '')" @update:location="onLocationText" @region="onRegion" />
-    <picker mode="date" @change="onDateChange">
-      <view class="ipt">{{ form.observedAt || '选择观察日期' }}</view>
-    </picker>
-    <view class="sec">基础描述</view>
-    <textarea class="ipt area" :value="String(form.description || '')" @input="onDescriptionInput" placeholder="形态/生境/发现经过…" />
-    <view class="sec">动态描述项</view>
-    <DynamicPlantForm :fields="fields" :model="fieldValues" />
+
+    <view class="card">
+      <text class="h3">地点与时间</text>
+      <RegionPicker :location-text="String(form.locationText || '')" @update:location="onLocationText" @region="onRegion" />
+      <picker mode="date" @change="onDateChange">
+        <view class="ipt picker-row">
+          <text>🗓 {{ form.observedAt || '选择观察日期' }}</text>
+          <text class="item__arrow">›</text>
+        </view>
+      </picker>
+    </view>
+
+    <view class="card">
+      <text class="h3">基础描述</text>
+      <textarea class="ipt area" :value="String(form.description || '')" @input="onDescriptionInput" placeholder="形态 / 生境 / 发现经过…" />
+    </view>
+
+    <view class="card">
+      <text class="h3">动态描述项</text>
+      <DynamicPlantForm :fields="fields" :model="fieldValues" />
+    </view>
+
     <view class="actions">
-      <button size="mini" :loading="saving" @tap="saveOnly">保存草稿</button>
+      <button size="mini" class="btn-ghost" :loading="saving" @tap="saveOnly">保存草稿</button>
       <button size="mini" class="btn-primary" :loading="submitting" @tap="submitNow">提交审核</button>
     </view>
   </view>
@@ -373,21 +397,33 @@ async function submitNow() {
 </script>
 
 <style scoped>
-.page { padding: 24rpx; display: flex; flex-direction: column; gap: 16rpx; }
-.sec { font-weight: 600; }
-.grid { display: flex; flex-wrap: wrap; gap: 12rpx; }
-.cell { width: 150rpx; height: 150rpx; position: relative; }
-.photo { width: 100%; height: 100%; border-radius: 12rpx; }
-.cover-badge { position: absolute; left: 4rpx; top: 4rpx; background: #e6a23c; color: #fff; font-size: 20rpx; padding: 2rpx 10rpx; border-radius: 999rpx; }
-.organ-badge { position: absolute; left: 4rpx; bottom: 4rpx; background: rgba(0,0,0,.55); color: #fff; font-size: 20rpx; padding: 2rpx 10rpx; border-radius: 999rpx; }
-.del { position: absolute; top: 4rpx; right: 8rpx; color: #fff; background: rgba(0,0,0,.5); border-radius: 50%; width: 36rpx; height: 36rpx; text-align: center; line-height: 36rpx; }
-.add { border: 2rpx dashed #aaa; border-radius: 12rpx; display: flex; align-items: center; justify-content: center; color: #666; }
-.ipt { border: 1rpx solid #ddd; border-radius: 10rpx; padding: 14rpx 16rpx; background: #fff; font-size: 28rpx; }
-.area { height: 160rpx; }
-.muted { color: #999; }
-.flex { display: flex; align-items: center; }
-.check { display: flex; align-items: center; gap: 8rpx; color: #555; }
-.species-list { border: 1rpx solid #ddd; border-radius: 10rpx; background: #fff; }
-.species-item { padding: 16rpx; border-bottom: 1rpx solid #f0f0f0; }
-.actions { display: flex; gap: 20rpx; margin-top: 12rpx; }
+.grid { display: flex; flex-wrap: wrap; gap: 14rpx; margin-top: 8rpx; }
+.cell { width: calc((100% - 42rpx) / 4); height: 150rpx; position: relative; }
+.photo { width: 100%; height: 100%; border-radius: 16rpx; }
+.cover-badge {
+  position: absolute; left: 6rpx; top: 6rpx; background: #e6a23c; color: #fff;
+  font-size: 19rpx; padding: 2rpx 10rpx; border-radius: 999rpx;
+}
+.organ-badge {
+  position: absolute; left: 6rpx; bottom: 6rpx; background: rgba(0, 0, 0, 0.55); color: #fff;
+  font-size: 19rpx; padding: 2rpx 10rpx; border-radius: 999rpx;
+}
+.del {
+  position: absolute; top: 4rpx; right: 6rpx; color: #fff; background: rgba(0, 0, 0, 0.5);
+  border-radius: 50%; width: 38rpx; height: 38rpx; text-align: center; line-height: 38rpx; font-size: 28rpx;
+}
+.add {
+  border: 2rpx dashed #c6d6c2; border-radius: 16rpx; display: flex; align-items: center;
+  justify-content: center; background: #fbfdfa;
+}
+.add__icon { font-size: 40rpx; color: #9db29a; }
+.area { height: 170rpx; width: 100%; box-sizing: border-box; }
+.sci { font-style: italic; color: #8a968c; font-size: 24rpx; margin-left: 10rpx; }
+.check { display: flex; align-items: center; gap: 10rpx; margin-top: 6rpx; }
+.check__text { color: #55645a; font-size: 26rpx; }
+.species-list { border: 1rpx solid #e8efe4; border-radius: 16rpx; background: #fff; margin-top: 8rpx; overflow: hidden; }
+.species-item { padding: 20rpx 22rpx; border-bottom: 1rpx solid #f1f5ef; display: flex; align-items: baseline; }
+.species-item:last-child { border-bottom: none; }
+.picker-row { display: flex; align-items: center; justify-content: space-between; margin-top: 8rpx; }
+.actions { display: flex; gap: 20rpx; }
 </style>

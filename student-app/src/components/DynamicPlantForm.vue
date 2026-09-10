@@ -83,10 +83,17 @@ function onMulti(field: FieldDef, event: Event) {
 </script>
 
 <style scoped>
-.fields { display: flex; flex-direction: column; gap: 18rpx; }
-.field { display: flex; flex-direction: column; gap: 8rpx; }
-.field__label { font-size: 26rpx; color: #444; }
-.req { color: #e54d42; margin-left: 4rpx; }
-.input { border: 1rpx solid #ddd; border-radius: 10rpx; padding: 14rpx 16rpx; background: #fff; font-size: 28rpx; }
-.textarea { height: 120rpx; }
+.fields { display: flex; flex-direction: column; gap: 22rpx; }
+.field { display: flex; flex-direction: column; gap: 10rpx; }
+.field__label { font-size: 26rpx; color: #55645a; font-weight: 600; }
+.req { color: #d24a4a; margin-left: 6rpx; }
+.input {
+  border: 1rpx solid #e3ebe0;
+  border-radius: 18rpx;
+  padding: 20rpx 24rpx;
+  background: #fbfdfa;
+  font-size: 28rpx;
+  color: #1f2d24;
+}
+.textarea { height: 140rpx; }
 </style>

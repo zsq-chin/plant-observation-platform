@@ -1,30 +1,65 @@
 <template>
-  <view class="page">
-    <view class="tabs">
-      <text v-for="t in tabs" :key="t.value" class="tab" :class="{ on: current === t.value }" @tap="switchTab(t.value)">{{ t.label }}</text>
-    </view>
-    <view v-if="current === 'LOCAL'" class="local-list">
-      <view v-for="d in localDrafts" :key="d.localId" class="card">
-        <view>本地草稿 · {{ photosText(d) }} · {{ new Date(d.savedAt).toLocaleString() }}</view>
-        <button size="mini" class="btn-primary" :loading="syncing === d.localId" @tap="sync(d.localId)">联网同步</button>
-      </view>
-      <view v-if="!localDrafts.length" class="empty">没有本地草稿</view>
-    </view>
-    <template v-else>
-      <view v-for="r in rows" :key="String(r.id)" class="card" @tap="continueEdit(r)">
-        <view class="row">
-          <text class="name">{{ r.reportedCommonName || '待鉴定/未命名' }}</text>
-          <text class="tag" :class="r.status.toLowerCase()">{{ STATUS_LABELS[r.status] || r.status }}</text>
+  <view class="page page--hero">
+    <AppHero title="我的植物" :subtitle="'共 ' + rows.length + ' 条记录 · 记录成长轨迹'">
+      <template #right>
+        <view class="avatar" @tap="goCapture">＋</view>
+      </template>
+    </AppHero>
+
+    <view class="tabs-wrap">
+      <scroll-view scroll-x class="tabs" :show-scrollbar="false">
+        <view class="tabs__inner">
+          <text
+            v-for="t in tabs"
+            :key="t.value"
+            class="pill"
+            :class="{ 'pill--on': current === t.value }"
+            @tap="switchTab(t.value)"
+            >{{ t.label }}</text
+          >
         </view>
-        <view class="muted">{{ r.provinceName || '' }} {{ r.cityName || '' }} {{ r.districtName || '' }} · {{ fmtDate(r.observedAt) }}</view>
-        <view class="actions" @tap.stop>
-          <button v-if="r.status === 'DRAFT' || r.status === 'REJECTED'" size="mini" class="btn-primary" @tap="submitIt(r)">提交审核</button>
-          <button v-if="r.status === 'SUBMITTED'" size="mini" @tap="withdrawIt(r)">撤回</button>
-          <button v-if="r.status === 'DRAFT' || r.status === 'REJECTED'" size="mini" class="btn-warn" @tap="removeIt(r)">删除</button>
+      </scroll-view>
+    </view>
+
+    <view class="lift">
+      <view v-if="current === 'LOCAL'" class="list">
+        <view v-for="d in localDrafts" :key="d.localId" class="card">
+          <view class="row">
+            <text class="h3">📥 本地草稿</text>
+            <text class="chip chip--warn">{{ photosText(d) }}</text>
+          </view>
+          <text class="muted">{{ formatTime(d.savedAt) }}</text>
+          <button size="mini" class="btn-primary" :loading="syncing === d.localId" @tap="sync(d.localId)">联网同步</button>
         </view>
+        <EmptyState v-if="!localDrafts.length" icon="📭" title="没有本地草稿" hint="弱网下采集会自动存到本机" />
       </view>
-      <view v-if="!rows.length" class="empty">暂无记录，去拍一株植物吧</view>
-    </template>
+
+      <template v-else>
+        <view v-for="r in rows" :key="String(r.id)" class="card ocard" @tap="continueEdit(r)">
+          <view class="row">
+            <text class="h3 grow ellipsis">{{ r.reportedCommonName || '待鉴定 / 未命名' }}</text>
+            <text class="chip" :class="statusChip(r.status)">{{ STATUS_LABELS[r.status] || r.status }}</text>
+          </view>
+          <view class="row row--tight">
+            <text class="muted ellipsis">📍 {{ place(r) }}</text>
+          </view>
+          <view class="row">
+            <text class="muted">🗓 {{ fmtDate(r.observedAt) }}</text>
+            <view class="actions" @tap.stop>
+              <button v-if="r.status === 'DRAFT' || r.status === 'REJECTED'" size="mini" class="btn-primary" @tap="submitIt(r)">提交审核</button>
+              <button v-if="r.status === 'SUBMITTED'" size="mini" class="btn-ghost" @tap="withdrawIt(r)">撤回</button>
+              <button v-if="r.status === 'DRAFT' || r.status === 'REJECTED'" size="mini" class="btn-warn" @tap="removeIt(r)">删除</button>
+            </view>
+          </view>
+        </view>
+        <EmptyState
+          v-if="!rows.length"
+          icon="🌱"
+          title="这里还空着"
+          hint="点右上角「＋」或底部「采集」记录第一株植物"
+        />
+      </template>
+    </view>
   </view>
 </template>
 
@@ -33,7 +68,9 @@ import { onLoad, onShow, onUnload } from "@dcloudio/uni-app"
 import { ref } from "vue"
 import { useAuthStore } from "@/stores/auth"
 import { createObservation, deleteObservation, myObservations, submitObservation, uploadPhoto, withdrawObservation } from "@/api/plant"
-import { readLocalDrafts, removeLocalDraft, saveLocalDraft } from "@/utils/storage"
+import AppHero from "@/components/AppHero.vue"
+import EmptyState from "@/components/EmptyState.vue"
+import { readLocalDrafts, removeLocalDraft } from "@/utils/storage"
 import { fmtDate, STATUS_LABELS } from "@/utils/media"
 import type { LocalDraft } from "@/utils/storage"
 import type { MyObservation } from "@/types/models"
@@ -51,6 +88,31 @@ const tabs = [
   { value: "APPROVED", label: "已通过" },
   { value: "REJECTED", label: "被驳回" },
 ]
+
+const STATUS_CHIP: Record<string, string> = {
+  DRAFT: "chip--plain",
+  SUBMITTED: "chip--info",
+  APPROVED: "chip--brand",
+  REJECTED: "chip--danger",
+  OFFLINE: "chip--plain",
+}
+function statusChip(status: string) {
+  return STATUS_CHIP[status] || "chip--plain"
+}
+function place(r: MyObservation) {
+  const parts = [r.provinceName, r.cityName, r.districtName].filter(Boolean)
+  return parts.length ? parts.join(" ") : "未填写地点"
+}
+function formatTime(ts: number) {
+  try {
+    return new Date(ts).toLocaleString()
+  } catch {
+    return ""
+  }
+}
+function goCapture() {
+  uni.navigateTo({ url: "/pages/capture/index" })
+}
 
 function onPlantStatus(status: string) {
   current.value = status === "LOCAL" ? "LOCAL" : tabs.some((t) => t.value === status) ? status : "ALL"
@@ -95,7 +157,6 @@ async function sync(localId: string) {
       }
     }
     if (failed.length) {
-      // 保留本地草稿，避免照片丢失
       uni.showToast({ title: "有 " + failed.length + " 张图片未同步，请重试", icon: "none" })
       load()
       return
@@ -115,7 +176,6 @@ function continueEdit(r: MyObservation) {
   uni.navigateTo({ url: "/pages/observation-edit/index?id=" + r.id })
 }
 
-/** 提交审核：只有后端成功才提示成功，失败保持原状态并提示 */
 async function submitIt(r: MyObservation) {
   try {
     await submitObservation(String(r.id))
@@ -162,20 +222,23 @@ function photosText(d: LocalDraft) {
 </script>
 
 <style scoped>
-.page { padding: 20rpx; }
-.tabs { display: flex; flex-wrap: wrap; gap: 10rpx; margin-bottom: 16rpx; }
-.tab { padding: 8rpx 22rpx; background: #fff; border-radius: 999rpx; font-size: 26rpx; }
-.tab.on { background: #3f9b3f; color: #fff; }
-.card { background: #fff; border-radius: 14rpx; padding: 18rpx; margin-bottom: 14rpx; display: flex; flex-direction: column; gap: 8rpx; }
-.row { display: flex; align-items: center; justify-content: space-between; }
-.name { font-weight: 600; font-size: 30rpx; }
-.tag { font-size: 22rpx; padding: 4rpx 14rpx; border-radius: 999rpx; }
-.tag.draft { background: #f2f2f2; color: #666; }
-.tag.submitted { background: #e8f3ff; color: #2a7de1; }
-.tag.approved { background: #e9f9e9; color: #2a9d3f; }
-.tag.rejected { background: #fff0f0; color: #e14d4d; }
-.muted { color: #999; font-size: 24rpx; }
+.tabs-wrap { margin-top: -46rpx; }
+.tabs { width: 100%; white-space: nowrap; }
+.tabs__inner { display: inline-flex; gap: 14rpx; padding: 0 24rpx; }
+.pill {
+  padding: 12rpx 28rpx;
+  border-radius: 999rpx;
+  font-size: 26rpx;
+  color: #55645a;
+  background: #ffffff;
+  box-shadow: 0 6rpx 18rpx rgba(31, 45, 36, 0.06);
+}
+.pill--on {
+  background: linear-gradient(135deg, #4aa64a 0%, #2f7a34 100%);
+  color: #ffffff;
+  font-weight: 600;
+}
+.list { display: flex; flex-direction: column; }
+.ocard { margin-bottom: 18rpx; }
 .actions { display: flex; gap: 12rpx; }
-.empty { color: #999; text-align: center; padding: 80rpx 0; }
-.local-list { display: flex; flex-direction: column; gap: 14rpx; }
 </style>

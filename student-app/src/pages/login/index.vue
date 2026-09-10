@@ -1,16 +1,32 @@
 <template>
-  <view class="page">
-    <view class="title">全国植物观察与交流平台</view>
-    <view class="subtitle">学生端 · 记录身边植物</view>
-    <input v-model="username" class="ipt" placeholder="学号 / 用户名" />
-    <input v-model="password" class="ipt" password placeholder="密码" />
-    <button class="btn-primary" :loading="loading" @tap="submit">登 录</button>
-    <view class="tip">账号密码登录；登录态安全保存在本机（不保存明文密码）。</view>
-    <view class="server">
-      <text class="server__label">服务器：{{ apiBaseLabel }}</text>
-      <text class="server__link" @tap="openServerSetting">设置</text>
+  <view class="login">
+    <view class="login__deco login__deco--a"></view>
+    <view class="login__deco login__deco--b"></view>
+
+    <view class="brand">
+      <view class="brand__logo">🌿</view>
+      <text class="brand__title">全国植物观察与交流平台</text>
+      <text class="brand__sub">学生端 · 记录身边的植物</text>
     </view>
-    <view class="tip">若打不开页面或提示网络异常，请点「设置」填写后端地址（如 http://192.168.1.5），需与后端处于同一网络。</view>
+
+    <view class="panel">
+      <view class="field">
+        <text class="field__label">账号</text>
+        <input v-model="username" class="field__ipt" placeholder="学号 / 用户名" placeholder-class="ph" />
+      </view>
+      <view class="field">
+        <text class="field__label">密码</text>
+        <input v-model="password" class="field__ipt" password placeholder="请输入密码" placeholder-class="ph" />
+      </view>
+      <button class="btn-primary btn-block login__btn" :loading="loading" @tap="submit">登 录</button>
+      <text class="tip">登录态安全保存在本机，不保存明文密码</text>
+    </view>
+
+    <view class="server" @tap="openServerSetting">
+      <text class="server__label">服务器：{{ apiBaseLabel }}</text>
+      <text class="server__link">设置 ›</text>
+    </view>
+    <text class="tip tip--bottom">若打不开页面或提示网络异常，请点「设置」填写后端地址（如 http://192.168.1.5），需与后端处于同一网络。</text>
   </view>
 </template>
 
@@ -61,11 +77,44 @@ async function submit() {
 </script>
 
 <style scoped>
-.page { padding: 80rpx 48rpx; display: flex; flex-direction: column; gap: 24rpx; }
-.title { font-size: 44rpx; font-weight: 700; }
-.subtitle { color: #777; margin-bottom: 24rpx; }
-.ipt { border: 1rpx solid #ddd; border-radius: 12rpx; padding: 20rpx; background: #fff; }
-.tip { color: #999; font-size: 24rpx; margin-top: 12rpx; }
-.server { display: flex; align-items: center; gap: 12rpx; margin-top: 8rpx; font-size: 24rpx; color: #666; }
-.server__link { color: #2f9b3f; text-decoration: underline; }
+.login {
+  min-height: 100vh;
+  padding: calc(var(--status-bar-height, 0px) + 120rpx) 48rpx 60rpx;
+  box-sizing: border-box;
+  background: linear-gradient(160deg, #4aa64a 0%, #2f7a34 52%, #235f29 100%);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+.login__deco { position: absolute; border-radius: 50%; background: rgba(255, 255, 255, 0.08); }
+.login__deco--a { width: 420rpx; height: 420rpx; top: -140rpx; right: -140rpx; }
+.login__deco--b { width: 300rpx; height: 300rpx; bottom: 200rpx; left: -120rpx; background: rgba(255, 255, 255, 0.06); }
+.brand { display: flex; flex-direction: column; align-items: center; gap: 12rpx; position: relative; }
+.brand__logo {
+  width: 128rpx; height: 128rpx; border-radius: 36rpx; background: rgba(255, 255, 255, 0.16);
+  display: flex; align-items: center; justify-content: center; font-size: 64rpx; margin-bottom: 8rpx;
+}
+.brand__title { font-size: 42rpx; font-weight: 700; color: #ffffff; text-align: center; }
+.brand__sub { font-size: 25rpx; color: rgba(255, 255, 255, 0.8); }
+.panel {
+  background: #ffffff; border-radius: 32rpx; padding: 40rpx 34rpx 30rpx; margin-top: 60rpx;
+  box-shadow: 0 20rpx 50rpx rgba(16, 46, 20, 0.22); display: flex; flex-direction: column; gap: 24rpx;
+  position: relative;
+}
+.field { display: flex; flex-direction: column; gap: 10rpx; }
+.field__label { font-size: 25rpx; color: #55645a; font-weight: 600; }
+.field__ipt {
+  background: #f6f9f4; border: 1rpx solid #e6efe3; border-radius: 18rpx;
+  padding: 24rpx; font-size: 30rpx; color: #1f2d24;
+}
+.ph { color: #a8b3aa; }
+.login__btn { margin-top: 12rpx; }
+.tip { font-size: 22rpx; color: #8a968c; text-align: center; }
+.tip--bottom { color: rgba(255, 255, 255, 0.7); margin-top: 18rpx; line-height: 1.6; }
+.server {
+  margin-top: 40rpx; display: flex; align-items: center; justify-content: center; gap: 12rpx;
+  font-size: 24rpx; color: rgba(255, 255, 255, 0.85); position: relative;
+}
+.server__link { color: #ffffff; text-decoration: underline; }
 </style>

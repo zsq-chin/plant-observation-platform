@@ -93,7 +93,23 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.region { display: flex; flex-direction: column; gap: 8rpx; }
-.region__field { border: 1rpx solid #ddd; border-radius: 10rpx; padding: 16rpx; background: #fff; }
-.region__input { border: 1rpx solid #ddd; border-radius: 10rpx; padding: 14rpx; background: #fff; }
+.region { display: flex; flex-direction: column; gap: 12rpx; }
+.region__field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 1rpx solid #e3ebe0;
+  border-radius: 18rpx;
+  padding: 22rpx 24rpx;
+  background: #fbfdfa;
+  font-size: 28rpx;
+  color: #1f2d24;
+}
+.region__input {
+  border: 1rpx solid #e3ebe0;
+  border-radius: 18rpx;
+  padding: 20rpx 24rpx;
+  background: #fbfdfa;
+  font-size: 27rpx;
+}
 </style>

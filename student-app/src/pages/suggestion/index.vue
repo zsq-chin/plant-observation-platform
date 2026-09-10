@@ -1,15 +1,30 @@
 <template>
   <view class="page">
-    <view class="intro">没找到你观察的植物？提交建议，教师确认后会补充到标准物种库。</view>
-    <input v-model="commonName" class="ipt" placeholder="建议中文名（必填或填学名）" />
-    <input v-model="scientificName" class="ipt" placeholder="学名（可选）" />
-    <textarea v-model="description" class="ipt area" placeholder="描述叶/花/果特征、生境与发现地点…" />
-    <button class="btn-primary" :loading="saving" @tap="submit">提交建议</button>
-    <view class="sec">我的建议</view>
-    <view v-for="s in mine" :key="String(s.id)" class="card">
-      <view>{{ s.suggestedCommonName || s.suggestedScientificName || '-' }} <text class="tag">{{ s.status }}</text></view>
-      <view v-if="s.reviewComment" class="muted">教师回复：{{ s.reviewComment }}</view>
+    <view class="card card--ink">
+      <text class="h2">没找到你观察的植物？</text>
+      <text class="ink-note">提交建议，教师确认后会补充到标准物种库，其他同学也能选到它。</text>
     </view>
+
+    <view class="card">
+      <text class="label">建议中文名</text>
+      <input v-model="commonName" class="ipt" placeholder="例如：珙桐" />
+      <text class="label">学名（可选）</text>
+      <input v-model="scientificName" class="ipt" placeholder="例如：Davidia involucrata" />
+      <text class="label">特征描述（可选）</text>
+      <textarea v-model="description" class="ipt area" placeholder="叶/花/果特征、生境与发现地点…" />
+      <button class="btn-primary btn-block" :loading="saving" @tap="submit">提交建议</button>
+    </view>
+
+    <view class="sec"><text class="sec__title">我的建议</text><text class="sec__more">{{ mine.length }} 条</text></view>
+    <view v-for="s in mine" :key="String(s.id)" class="card">
+      <view class="row">
+        <text class="h3 grow ellipsis">{{ s.suggestedCommonName || s.suggestedScientificName || '-' }}</text>
+        <text class="chip" :class="statusChip(s.status)">{{ statusLabel(s.status) }}</text>
+      </view>
+      <text v-if="s.suggestedScientificName" class="muted sci">{{ s.suggestedScientificName }}</text>
+      <text v-if="s.reviewComment" class="muted">教师回复：{{ s.reviewComment }}</text>
+    </view>
+    <EmptyState v-if="!mine.length" icon="💡" title="还没有提交过建议" hint="发现新物种时提交，教师会尽快确认" />
   </view>
 </template>
 
@@ -17,6 +32,7 @@
 import { onShow } from "@dcloudio/uni-app"
 import { ref } from "vue"
 import { createSuggestion, mySuggestions } from "@/api/plant"
+import EmptyState from "@/components/EmptyState.vue"
 import type { SuggestionItem } from "@/types/models"
 
 const commonName = ref("")
@@ -24,6 +40,20 @@ const scientificName = ref("")
 const description = ref("")
 const saving = ref(false)
 const mine = ref<SuggestionItem[]>([])
+
+const LABELS: Record<string, string> = {
+  PENDING: "待教师确认",
+  APPROVED: "已采纳",
+  REJECTED: "未采纳",
+}
+function statusLabel(status: string) {
+  return LABELS[status] || status
+}
+function statusChip(status: string) {
+  if (status === "APPROVED") return "chip--brand"
+  if (status === "REJECTED") return "chip--danger"
+  return "chip--warn"
+}
 
 onShow(async () => {
   const result = await mySuggestions(1, 20).catch(() => null)
@@ -56,13 +86,7 @@ async function submit() {
 </script>
 
 <style scoped>
-.page { padding: 24rpx; display: flex; flex-direction: column; gap: 16rpx; }
-.btn-primary { background: #3f9b3f; color: #fff; }
-.intro { color: #777; }
-.ipt { border: 1rpx solid #ddd; border-radius: 10rpx; padding: 16rpx; background: #fff; }
-.area { height: 160rpx; }
-.sec { font-weight: 600; margin-top: 10rpx; }
-.card { background: #fff; border-radius: 12rpx; padding: 16rpx; display: flex; flex-direction: column; gap: 6rpx; }
-.tag { font-size: 22rpx; background: #eee; border-radius: 8rpx; padding: 2rpx 10rpx; margin-left: 10rpx; }
-.muted { color: #999; font-size: 24rpx; }
+.ink-note { font-size: 24rpx; color: rgba(255, 255, 255, 0.85); }
+.area { height: 180rpx; width: 100%; box-sizing: border-box; }
+.sci { font-style: italic; }
 </style>

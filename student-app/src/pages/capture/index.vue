@@ -1,22 +1,45 @@
 <template>
   <view class="page">
-    <view class="sec">① 照片（{{ photos.length }}/10）</view>
-    <view class="grid">
-      <view v-for="(p, i) in photos" :key="i" class="cell">
-        <image :src="p" mode="aspectFill" class="photo" />
-        <text class="del" @tap="remove(i)">×</text>
+    <view class="card">
+      <view class="row">
+        <text class="h3">① 拍摄照片</text>
+        <text class="chip chip--brand">{{ photos.length }} / 10</text>
       </view>
-      <view v-if="photos.length < 10" class="cell add" @tap="pick('camera')">📷 拍摄</view>
-      <view v-if="photos.length < 10" class="cell add" @tap="pick('album')">🖼 相册</view>
+      <text class="muted">建议拍摄全株 + 叶片 + 花果特写，审核通过率更高</text>
+      <view class="grid">
+        <view v-for="(p, i) in photos" :key="i" class="cell">
+          <image :src="p" mode="aspectFill" class="photo" />
+          <text class="del" @tap="remove(i)">×</text>
+        </view>
+        <view v-if="photos.length < 10" class="cell add" @tap="pick('camera')">
+          <text class="add__icon">📷</text><text class="add__text">拍摄</text>
+        </view>
+        <view v-if="photos.length < 10" class="cell add" @tap="pick('album')">
+          <text class="add__icon">🖼️</text><text class="add__text">相册</text>
+        </view>
+      </view>
     </view>
-    <view class="sec">器官类型</view>
-    <view class="organs">
-      <text v-for="o in organs" :key="o.value" class="chip" :class="{ on: organ === o.value }" @tap="organ = o.value">{{ o.label }}</text>
+
+    <view class="card">
+      <text class="h3">② 器官类型</text>
+      <view class="organs">
+        <text v-for="o in organs" :key="o.value" class="pill" :class="{ 'pill--on': organ === o.value }" @tap="organ = o.value">{{ o.label }}</text>
+      </view>
     </view>
-    <view class="sec">② 地点（主动选择，不获取定位）</view>
-    <RegionPicker :location-text="location" @update:location="location = $event" @region="onRegion" />
-    <button class="btn-primary" :loading="saving" @tap="saveDraft">保存草稿</button>
-    <view class="hint">没网也能先存本地草稿：保存失败会自动放入“本地待同步”，回家联网后在我的植物里重试。</view>
+
+    <view class="card">
+      <view class="row">
+        <text class="h3">③ 观察地点</text>
+        <text class="chip">主动选择 · 不获取定位</text>
+      </view>
+      <RegionPicker :location-text="location" @update:location="location = $event" @region="onRegion" />
+    </view>
+
+    <button class="btn-primary btn-block" :loading="saving" @tap="saveDraft">保存草稿</button>
+    <view class="hint">
+      <text class="hint__icon">💡</text>
+      <text class="hint__text">没网也能先存本地草稿：保存失败会自动放入「本地待同步」，回家联网后在“我的植物”里重试。</text>
+    </view>
   </view>
 </template>
 
@@ -27,7 +50,7 @@ import { useAuthStore } from "@/stores/auth"
 import { chooseAndCompressImages } from "@/api/request"
 import { createObservation } from "@/api/plant"
 import RegionPicker from "@/components/RegionPicker.vue"
-import { readLocalDrafts, removeLocalDraft, saveLocalDraft } from "@/utils/storage"
+import { saveLocalDraft } from "@/utils/storage"
 
 const auth = useAuthStore()
 const photos = ref<string[]>([])
@@ -115,15 +138,25 @@ function uploadPhotoToServer(id: string, filePath: string) {
 </script>
 
 <style scoped>
-.page { padding: 24rpx; display: flex; flex-direction: column; gap: 14rpx; }
-.sec { font-weight: 600; }
-.grid { display: flex; flex-wrap: wrap; gap: 12rpx; }
-.cell { width: 160rpx; height: 160rpx; position: relative; }
-.photo { width: 100%; height: 100%; border-radius: 12rpx; }
-.del { position: absolute; top: 4rpx; right: 8rpx; color: #fff; background: rgba(0,0,0,.5); border-radius: 50%; width: 36rpx; height: 36rpx; text-align: center; line-height: 36rpx; }
-.add { border: 2rpx dashed #aaa; border-radius: 12rpx; display: flex; align-items: center; justify-content: center; color: #666; }
-.organs { display: flex; flex-wrap: wrap; gap: 12rpx; }
-.chip { padding: 10rpx 24rpx; background: #fff; border-radius: 999rpx; font-size: 26rpx; }
-.chip.on { background: #3f9b3f; color: #fff; }
-.hint { color: #999; font-size: 24rpx; }
+.grid { display: flex; flex-wrap: wrap; gap: 14rpx; margin-top: 8rpx; }
+.cell { width: calc((100% - 28rpx) / 3); height: 190rpx; position: relative; }
+.photo { width: 100%; height: 100%; border-radius: 18rpx; }
+.del {
+  position: absolute; top: 6rpx; right: 10rpx; color: #fff; background: rgba(0, 0, 0, 0.55);
+  border-radius: 50%; width: 40rpx; height: 40rpx; text-align: center; line-height: 40rpx; font-size: 30rpx;
+}
+.add {
+  border: 2rpx dashed #c6d6c2; border-radius: 18rpx; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 6rpx; background: #fbfdfa;
+}
+.add__icon { font-size: 42rpx; }
+.add__text { font-size: 24rpx; color: #7b8a80; }
+.organs { display: flex; flex-wrap: wrap; gap: 14rpx; margin-top: 8rpx; }
+.pill {
+  padding: 12rpx 30rpx; background: #f4f7f2; border-radius: 999rpx; font-size: 26rpx; color: #55645a;
+}
+.pill--on { background: linear-gradient(135deg, #4aa64a 0%, #2f7a34 100%); color: #fff; font-weight: 600; }
+.hint { display: flex; gap: 12rpx; padding: 0 8rpx; }
+.hint__icon { font-size: 26rpx; }
+.hint__text { flex: 1; color: #8a968c; font-size: 23rpx; line-height: 1.6; }
 </style>
