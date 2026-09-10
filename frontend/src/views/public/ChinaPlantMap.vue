@@ -38,7 +38,7 @@
         </div>
 
         <FeaturedWorkOverlay
-          v-if="stage === 'CHINA_OVERVIEW' && featuredAnchors.length"
+          v-if="showFeaturedOverlay"
           :items="featuredAnchors"
           :size="mapSize"
           :active-key="hoveredWorkKey"
@@ -216,6 +216,11 @@ const statsByCode = computed(() => {
   for (const row of statsRows.value) map[row.provinceCode] = row
   return map
 })
+
+/** 窄屏（手机/小窗）隐藏精选卡片与引导线，避免遮挡地图主体；改为在页面下方提示（P2 适配）。 */
+const showFeaturedOverlay = computed(
+  () => stage.value === "CHINA_OVERVIEW" && featuredAnchors.value.length > 0 && mapSize.width >= 900,
+)
 
 const reducedMotion = prefersReducedMotion()
 const cameraDuration = () => (reducedMotion ? 200 : 1100)
