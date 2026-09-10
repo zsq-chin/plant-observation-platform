@@ -36,6 +36,7 @@ function onProvinceSelect(payload: { code?: string; name?: string }) {
   const now = Date.now()
   if (code === lastSelect.code && now - lastSelect.at < 600) return
   lastSelect = { code, at: now }
+  console.log("[5] ChinaMap2D 派发 select", code, payload?.name)
   emit("select", code, String(payload?.name || code))
 }
 

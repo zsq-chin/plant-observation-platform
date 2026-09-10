@@ -36,22 +36,28 @@ export default {
       const el = this.$el
       if (!el) return
       try {
+        console.log("[1] 开始加载地图数据", GEO_URL)
         const response = await fetch(GEO_URL)
         if (!response.ok) throw new Error("地图数据加载失败 " + response.status)
         const geo = await response.json()
         const map = {}
+        let taiwanFound = false
         for (const feature of geo.features || []) {
-          const name = String((feature.properties || {}).name || "")
-          const code = String((feature.properties || {}).adcode || "")
+          const props = feature.properties || {}
+          const name = String(props.name || "")
+          // 编码兜底：properties.adcode 优先，其次 feature.id（不同来源 GeoJSON 字段不一致）
+          const code = String(props.adcode || feature.id || "")
           if (name && code) map[name] = code
+          if (code === "710000" || name === "台湾省") taiwanFound = true
         }
         this.nameToCode = map
+        console.log("[2] GeoJSON 省份数", Object.keys(map).length, "含台湾", taiwanFound, "四川=", map["四川省"])
         echarts.registerMap("china", geo)
         this.chart = echarts.init(el)
         this.chart.on("click", (params) => {
           const name = String((params && params.name) || "")
           const code = this.nameToCode[name]
-          console.log("[china-map] click", name, code, "ownerInstance=", typeof this.$ownerInstance)
+          console.log("[3] ECharts 点击", name, "-> provinceCode =", code || "(未匹配)")
           if (!code) return
           this.emitSelect(code, name)
         })
@@ -69,6 +75,7 @@ export default {
      */
     emitSelect(code, name) {
       const payload = { code: code, name: name }
+      console.log("[4] 回传逻辑层", JSON.stringify(payload), "callMethod=", !!(this.$ownerInstance && this.$ownerInstance.callMethod))
       if (this.$ownerInstance && typeof this.$ownerInstance.callMethod === "function") {
         try {
           this.$ownerInstance.callMethod("onProvinceSelect", payload)
@@ -84,6 +91,8 @@ export default {
       if (!this.chart) return
       const stats = (payload && payload.stats) || []
       const data = stats.map((item) => ({ name: item.provinceName, value: Number(item.observationCount || 0) }))
+      // 台湾面积小：数据项标签上移，避免文字压住岛屿本体（与 PC 端一致）
+      data.push({ name: "台湾省", value: 0, label: { show: true, position: "top" } })
       const maxValue = Math.max(1, ...data.map((d) => d.value))
       this.chart.setOption({
         tooltip: { trigger: "item" },
@@ -96,7 +105,7 @@ export default {
           itemHeight: 60,
           text: ["多", "少"],
           textStyle: { fontSize: 10, color: "#5b6b50" },
-          inRange: { color: ["#eef5e7", "#c3ddab", "#8fbf72", "#4f8a44", "#2f6b31"] },
+          inRange: { color: ["#bfd9a4", "#9cc97c", "#78b055", "#548f3c", "#2f6b31"] },
         },
         series: [
           {
@@ -105,7 +114,8 @@ export default {
             roam: true,
             zoom: 1.18,
             label: { show: true, fontSize: 9, color: "#33512a" },
-            itemStyle: { borderColor: "#ffffff", borderWidth: 0.6, areaColor: "#eef4e8" },
+            // 无数据省份底色加深（原 #eef4e8 太浅，台湾等小岛几乎看不出），边界加粗便于辨认轮廓
+            itemStyle: { borderColor: "#4f7a3c", borderWidth: 1.1, areaColor: "#bfd9a4" },
             emphasis: { label: { show: true, fontWeight: "bold" }, itemStyle: { areaColor: "#ffd166" } },
             data,
           },
