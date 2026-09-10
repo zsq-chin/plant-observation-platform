@@ -46,6 +46,14 @@
             "sdkConfigs" : {}
         }
     },
+    /* H5 部署配置：子路径 + hash 路由（无需服务端 rewrite） */
+    "h5" : {
+        "title" : "植物观察",
+        "router" : {
+            "base" : "/jingxuan/app/",
+            "mode" : "hash"
+        }
+    },
     /* 快应用特有相关 */
     "quickapp" : {},
     /* 小程序特有相关 */

@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>植物观察 App · 手机安装</title>
+  <style>
+    body { margin: 0; font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background: linear-gradient(160deg, #eaf2e2, #f6f8ef); color: #23301c; }
+    .wrap { max-width: 560px; margin: 0 auto; padding: 28px 20px 48px; }
+    h1 { font-size: 22px; margin: 0 0 6px; }
+    p.lead { color: #55674a; margin: 0 0 20px; font-size: 14px; }
+    .card { background: #fff; border: 1px solid #dde6d3; border-radius: 16px; padding: 18px; margin-bottom: 16px; box-shadow: 0 6px 20px rgba(60, 90, 40, .08); }
+    .card h2 { font-size: 16px; margin: 0 0 10px; }
+    .qr { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+    .qr img { width: 150px; height: 150px; border: 1px solid #e3ead9; border-radius: 12px; background: #fff; }
+    .btn { display: inline-block; padding: 12px 18px; border-radius: 999px; background: #2f6b31; color: #fff; text-decoration: none; font-weight: 600; font-size: 15px; }
+    .btn.alt { background: #e6a23c; }
+    ul { padding-left: 20px; margin: 8px 0 0; color: #4b5a41; font-size: 14px; line-height: 1.7; }
+    code { background: #f1f5ea; padding: 1px 6px; border-radius: 6px; font-size: 13px; }
+    .muted { color: #7b8a70; font-size: 12px; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>植物观察 App · 手机安装</h1>
+    <p class="lead">手机需与电脑处于<strong>同一 WiFi</strong>。以下两种方式任选其一。</p>
+
+    <div class="card">
+      <h2>方式一：安装 APK（推荐，桌面图标）</h2>
+      <div class="qr">
+        <img src="./qr-apk.png" alt="APK 下载二维码" />
+        <div>
+          <a class="btn" href="./plant-app-debug.apk" download>下载 APK（3.9 MB）</a>
+          <p class="muted">扫码或点按钮下载后安装；华为手机需先允许「安装外部来源应用」。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>方式二：浏览器直接打开（免安装）</h2>
+      <div class="qr">
+        <img src="./qr-h5.png" alt="网页版二维码" />
+        <div>
+          <a class="btn alt" href="/jingxuan/app/">打开网页版</a>
+          <p class="muted">浏览器菜单「添加到主屏幕」可获得类 App 图标。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>安装与使用提示</h2>
+      <ul>
+        <li>华为 P40 / HarmonyOS：设置 → 安全 → 更多安全设置 → 安装外部来源应用 → 允许「浏览器」或「文件管理」</li>
+        <li>演示账号：<code>stu1 / admin123</code>（学生）、<code>tea1 / admin123</code>（教师）</li>
+        <li>APK 为调试包（WebView 壳，实时加载局域网网页版），后端地址：<code>http://10.120.46.175</code></li>
+        <li>若打不开：确认手机与电脑同一 WiFi，且 Windows 防火墙允许 80 端口入站</li>
+      </ul>
+    </div>
+  </div>
+</body>
+</html>

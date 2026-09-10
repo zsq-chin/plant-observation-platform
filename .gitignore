@@ -85,3 +85,14 @@ backup/
 # 临时文件与 uni-app 打包产物
 .tmp-reads/
 student-app/unpackage/
+
+# 学生 App H5 构建产物（部署时由 student-app 构建产生，不入库）
+frontend/public/app/
+
+# Android 本地构建产物与机器相关配置
+student-app/android/build/
+student-app/android/app/build/
+student-app/android/local.properties
+student-app/android/.gradle/
+student-app/android/app/src/main/assets/public/
+
