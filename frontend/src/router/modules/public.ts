@@ -38,18 +38,6 @@ const publicRoutes: RouteRecordRaw[] = [
         meta: { title: '植物物种库' },
       },
       {
-        path: 'works',
-        name: 'PublicWorkList',
-        component: () => import('@/views/public/WorkList.vue'),
-        meta: { title: 'Works' },
-      },
-      {
-        path: 'works/:id',
-        name: 'PublicWorkDetail',
-        component: () => import('@/views/public/WorkDetail.vue'),
-        meta: { title: 'Work Detail' },
-      },
-      {
         path: 'ranking',
         name: 'PublicRanking',
         component: () => import('@/views/public/Ranking.vue'),

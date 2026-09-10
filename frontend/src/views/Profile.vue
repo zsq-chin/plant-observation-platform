@@ -151,7 +151,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage, type FormInstance } from 'element-plus'
 import { useAuthStore } from '@/app/session/auth'
 import { updateProfile, changePassword } from '@/api/student/auth'
-import { uploadFile } from '@/api/student/work'
+import { uploadFile } from '@/api/upload'
 
 const router = useRouter()
 const authStore = useAuthStore()

@@ -80,7 +80,7 @@
         </el-table-column>
         <el-table-column label="作品名称" min-width="220">
           <template #default="{ row }">
-            <router-link :to="`/works/${row.workId}`" class="work-link">{{ row.workTitle }}</router-link>
+            <span class="work-link">{{ row.workTitle }}</span>
           </template>
         </el-table-column>
         <el-table-column prop="techStack" label="技术栈" width="160" show-overflow-tooltip />

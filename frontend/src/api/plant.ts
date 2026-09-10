@@ -193,6 +193,20 @@ export interface GalleryQuery {
   sort?: "featured" | "latest" | "view"
 }
 
+/** 学生工作台统计（植物观察，V4 §6）：草稿/待审/已通过/被驳回数量 */
+export interface StudentDashboard {
+  draftCount: number | string
+  submittedCount: number | string
+  approvedCount: number | string
+  rejectedCount: number | string
+  unreadNotificationCount?: number | string
+}
+
+export async function fetchStudentDashboard(): Promise<StudentDashboard> {
+  const payload = (await request.get("/api/student/plant/dashboard")) as { data: StudentDashboard }
+  return payload.data
+}
+
 export async function fetchHome(): Promise<HomeData> {
   return unwrap<HomeData>(await request.get("/api/public/plant/home"))
 }

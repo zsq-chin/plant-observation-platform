@@ -3,7 +3,7 @@
     <div class="login-shell reveal-up">
       <section class="login-aside">
         <span class="page-kicker">Exhibition Access</span>
-        <h1 class="login-title">让作品以更好的方式被看见，也让每一次提交更像一次正式呈现。</h1>
+        <h1 class="login-title">记录身边的植物，让每一次观察都成为可被看见的植物故事。</h1>
         <p class="login-copy">
           平台将公共展览、学生创作、教师评审与后台归档整合为同一套视觉与工作流。登录后，你会进入与当前角色相匹配的工作界面。
         </p>
@@ -15,7 +15,7 @@
           </div>
           <div class="hero-metric">
             <span class="hero-metric__label">Student</span>
-            <span class="hero-metric__value">作品整理</span>
+            <span class="hero-metric__value">观察整理</span>
           </div>
           <div class="hero-metric">
             <span class="hero-metric__label">Teacher</span>
@@ -27,7 +27,7 @@
           </div>
         </div>
 
-        <router-link to="/works" class="login-link"> 先进入公共展廊 </router-link>
+        <router-link to="/plant/gallery" class="login-link"> 先浏览植物观察展廊 </router-link>
       </section>
 
       <section class="login-panel">

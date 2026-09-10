@@ -20,34 +20,10 @@ const studentRoutes: RouteRecordRaw[] = [
         meta: { title: '首页' },
       },
       {
-        path: 'works',
-        name: 'MyWorks',
-        component: () => import('@/views/student/MyWorks.vue'),
-        meta: { title: '我的作品' },
-      },
-      {
-        path: 'works/create',
-        name: 'WorkCreate',
-        component: () => import('@/views/student/WorkSubmit.vue'),
-        meta: { title: '提交作品' },
-      },
-      {
         path: 'todos',
         name: 'TodoList',
         component: () => import('@/views/student/TodoList.vue'),
         meta: { title: '我的待办' },
-      },
-      {
-        path: 'works/edit/:id',
-        name: 'WorkEdit',
-        component: () => import('@/views/student/WorkSubmit.vue'),
-        meta: { title: '编辑作品' },
-      },
-      {
-        path: 'works/view/:id',
-        name: 'WorkView',
-        component: () => import('@/views/student/WorkSubmit.vue'),
-        meta: { title: '作品详情' },
       },
       {
         path: 'observations',

@@ -21,10 +21,6 @@
             <el-icon><Document /></el-icon>
             <span>我的植物观察</span>
           </el-menu-item>
-          <el-menu-item index="/student/works">
-            <el-icon><Folder /></el-icon>
-            <span>旧·作品管理</span>
-          </el-menu-item>
           <el-menu-item index="/student/ranking">
             <el-icon><Trophy /></el-icon>
             <span>我的评分</span>
@@ -36,7 +32,7 @@
         </el-menu>
 
         <div class="workspace-layout__section-note">
-          公开展示页强调展览气质，学生端保留同一品牌下更轻盈、可操作的创作工作流。
+          学生端围绕「拍摄植物 → 记录观察 → 提交审核」展开，公开展示页展示审核通过的植物观察。
         </div>
       </aside>
 
@@ -87,7 +83,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/app/session/auth'
 import { getUnreadCount } from '@/api/notify'
 import { useNotificationPolling } from '@/composables/useNotificationPolling'
-import { ArrowDown, HomeFilled, List, Document, Folder, Trophy, Bell } from '@element-plus/icons-vue'
+import { ArrowDown, HomeFilled, List, Document, Trophy, Bell } from '@element-plus/icons-vue'
 import AppThemeToggle from '@/components/AppThemeToggle.vue'
 
 const route = useRoute()
@@ -103,7 +99,7 @@ const pageTitle = computed(() => {
   const map: Record<string, string> = {
     '/student/home': '学生首页',
     '/student/todos': '我的待办',
-    '/student/works': '我的作品',
+    '/student/observations': '我的植物观察',
     '/student/ranking': '我的评分',
     '/student/notify': '消息通知',
   }
@@ -112,13 +108,13 @@ const pageTitle = computed(() => {
 
 const pageDescription = computed(() => {
   const map: Record<string, string> = {
-    '/student/home': '用更清晰的节奏查看作品状态、提交进度与展示入口。',
-    '/student/todos': '查看各评分批次的待办任务，选择一项去提交作品。',
-    '/student/works': '统一管理草稿、审核中与已发布作品。',
-    '/student/ranking': '查看作品评分反馈与当前表现。',
+    '/student/home': '查看植物观察的草稿、审核进度与公开展示入口。',
+    '/student/todos': '查看各评分批次的待办任务。',
+    '/student/observations': '统一管理草稿、待审核、已通过与已下线的植物观察。',
+    '/student/ranking': '查看评分反馈与当前表现。',
     '/student/notify': '集中查看审核结果、发布动态与评论回复提醒。',
   }
-  return map[route.path] || '围绕作品组织信息，而不是围绕表单堆砌页面。'
+  return map[route.path] || '围绕植物观察组织信息。'
 })
 
 const goNotify = () => router.push('/student/notify')

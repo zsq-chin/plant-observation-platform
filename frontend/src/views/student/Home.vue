@@ -7,38 +7,38 @@
         <p class="student-hero__copy">
           {{
             authStore.userInfo?.className || '当前未绑定班级信息'
-          }}。从这里继续整理作品、补充材料并进入公共展示页查看最终呈现效果。
+          }}。从这里记录身边的植物、补充观察信息，并在植物观察展廊中查看展示效果。
         </p>
       </div>
       <div class="student-hero__actions">
-        <el-button type="primary" size="large" @click="router.push('/student/works/create')">
+        <el-button type="primary" size="large" @click="router.push('/student/observations/create')">
           <el-icon><Plus /></el-icon>
-          提交新作品
+          新增植物观察
         </el-button>
-        <el-button size="large" @click="router.push('/works')">查看公共展廊</el-button>
+        <el-button size="large" @click="router.push('/plant/gallery')">植物观察展廊</el-button>
       </div>
     </section>
 
     <section class="stats-grid reveal-up reveal-delay-1" v-loading="loading">
-      <article class="stat-card" @click="router.push('/student/works')">
-        <span class="stat-card__label">草稿</span>
+      <article class="stat-card" @click="router.push('/student/observations')">
+        <span class="stat-card__label">草稿观察</span>
         <strong class="stat-card__value">{{ stats.draft }}</strong>
-        <p class="stat-card__meta">继续整理，暂未提交审核。</p>
+        <p class="stat-card__meta">继续补充照片与观察信息后提交。</p>
       </article>
-      <article class="stat-card" @click="router.push('/student/works')">
-        <span class="stat-card__label">审核中</span>
+      <article class="stat-card" @click="router.push('/student/observations')">
+        <span class="stat-card__label">待审核</span>
         <strong class="stat-card__value">{{ stats.submitted }}</strong>
-        <p class="stat-card__meta">已进入流程，等待教师或管理员处理。</p>
+        <p class="stat-card__meta">已提交，等待教师审核。</p>
       </article>
-      <article class="stat-card" @click="router.push('/student/works')">
+      <article class="stat-card" @click="router.push('/student/observations')">
         <span class="stat-card__label">已通过</span>
         <strong class="stat-card__value">{{ stats.approved }}</strong>
-        <p class="stat-card__meta">可进一步发布与展示。</p>
+        <p class="stat-card__meta">已进入展廊、地图与物种页公开展示。</p>
       </article>
-      <article class="stat-card stat-card--warning" @click="router.push('/student/works')">
+      <article class="stat-card stat-card--warning" @click="router.push('/student/observations')">
         <span class="stat-card__label">被驳回</span>
         <strong class="stat-card__value">{{ stats.rejected }}</strong>
-        <p class="stat-card__meta">查看原因并调整后再次提交。</p>
+        <p class="stat-card__meta">查看审核意见，修改后重新提交。</p>
       </article>
     </section>
 
@@ -51,15 +51,15 @@
           </div>
         </div>
         <div class="quick-grid">
-          <button class="quick-tile" type="button" @click="router.push('/student/works/create')">
+          <button class="quick-tile" type="button" @click="router.push('/student/observations/create')">
             <el-icon size="24"><EditPen /></el-icon>
-            <strong>提交作品</strong>
-            <span>上传封面、摘要、附件与在线体验地址。</span>
+            <strong>新增植物观察</strong>
+            <span>拍照上传、选择植物与观察地点、填写观察时间。</span>
           </button>
-          <button class="quick-tile" type="button" @click="router.push('/student/works')">
+          <button class="quick-tile" type="button" @click="router.push('/student/observations')">
             <el-icon size="24"><FolderOpened /></el-icon>
-            <strong>我的作品</strong>
-            <span>统一查看草稿、审核状态与发布结果。</span>
+            <strong>我的植物观察</strong>
+            <span>统一查看草稿、审核状态与公开展示结果。</span>
           </button>
           <button class="quick-tile" type="button" @click="router.push('/student/ranking')">
             <el-icon size="24"><Trophy /></el-icon>
@@ -72,12 +72,12 @@
       <section class="surface-panel">
         <div class="section-heading">
           <div>
-            <h2 class="section-heading__title">创作提醒</h2>
-            <p class="section-heading__meta">让作品更适合被浏览、被评审、被归档。</p>
+            <h2 class="section-heading__title">观察建议</h2>
+            <p class="section-heading__meta">让观察记录更清晰、更容易通过审核。</p>
           </div>
         </div>
         <div class="editorial-note">
-          封面尽量保持统一比例，摘要建议用 2 到 4 句话说明问题、方法与结果；技术栈请优先填写读者能快速识别的关键词。
+          照片建议包含整体与局部（叶片/花/果实），并选择一张清晰的设为封面；观察地点按省市区如实选择，描述可写形态特征、生境与发现经过；不确定物种时可勾选「未知植物（待鉴定）」。
         </div>
       </section>
     </div>
@@ -88,7 +88,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/app/session/auth'
-import { getMyWorks, type WorkItem } from '@/api/student/work'
+import { fetchStudentDashboard } from '@/api/plant'
 import { Plus, EditPen, FolderOpened, Trophy } from '@element-plus/icons-vue'
 
 const router = useRouter()
@@ -99,13 +99,12 @@ const stats = ref({ draft: 0, submitted: 0, approved: 0, rejected: 0 })
 async function loadStats() {
   loading.value = true
   try {
-    const res = await getMyWorks({ page: 1, pageSize: 100 })
-    const works = res.data?.records || []
+    const dashboard = await fetchStudentDashboard()
     stats.value = {
-      draft: works.filter((work: WorkItem) => work.status === 'draft').length,
-      submitted: works.filter((work: WorkItem) => work.status === 'submitted').length,
-      approved: works.filter((work: WorkItem) => work.status === 'approved').length,
-      rejected: works.filter((work: WorkItem) => work.status === 'rejected').length,
+      draft: Number(dashboard.draftCount || 0),
+      submitted: Number(dashboard.submittedCount || 0),
+      approved: Number(dashboard.approvedCount || 0),
+      rejected: Number(dashboard.rejectedCount || 0),
     }
   } finally {
     loading.value = false

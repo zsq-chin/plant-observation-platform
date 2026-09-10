@@ -12,7 +12,6 @@
           <router-link class="nav-link" to="/plant/gallery">植物展廊</router-link>
           <router-link class="nav-link" to="/plant/map">中国地图</router-link>
           <router-link class="nav-link" to="/plant/species">物种库</router-link>
-          <router-link class="nav-link" to="/works">旧版展廊</router-link>
         </nav>
 
         <div class="public-header__actions">

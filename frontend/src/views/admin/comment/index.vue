@@ -128,7 +128,9 @@ const handleReset = () => {
 const getRowIndex = (index: number) => (query.page - 1) * query.size + index + 1
 
 const openWork = (workId: number) => {
-  window.open(`/works/${workId}`, '_blank')
+  // 旧公开作品详情路由已下线（业务收口到植物观察），统一跳转植物观察展廊
+  void workId
+  window.open('/plant/gallery', '_blank')
 }
 
 const toggleExpand = (row: AdminCommentItem & { _expanded?: boolean }) => {

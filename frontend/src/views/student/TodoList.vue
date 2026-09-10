@@ -68,8 +68,8 @@
               >
                 去提交
               </el-button>
-              <el-button v-else-if="task.status === 1 && task.workId" size="small" @click="goViewWork(task)">
-                查看作品
+              <el-button v-else-if="task.status === 1" size="small" @click="router.push('/student/observations')">
+                查看我的观察
               </el-button>
             </div>
           </div>
@@ -137,16 +137,11 @@ async function loadTasks() {
 }
 
 function goSubmit(task: StudentTask) {
+  // 统一收口到植物观察创建（旧作品提交入口已下线）
   router.push({
-    path: '/student/works/create',
+    path: '/student/observations/create',
     query: { batchId: String(task.batchId), taskId: String(task.id) },
   })
-}
-
-function goViewWork(task: StudentTask) {
-  if (task.workId) {
-    router.push(`/student/works/view/${task.workId}`)
-  }
 }
 
 onMounted(loadTasks)
