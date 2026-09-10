@@ -64,6 +64,11 @@ public class TeacherPlantController {
     @Operation(summary = "审核通过（可选绑定标准物种/意见）")
     @PostMapping("/reviews/{observationId}/approve")
     public Result<Void> approve(@PathVariable Long observationId, @Valid @RequestBody ReviewDecisionRequest req) {
+        // 兼容旧客户端：若请求体携带 REJECTED，则按驳回处理，避免"误调端点导致静默通过"
+        if ("REJECTED".equalsIgnoreCase(req.action())) {
+            reviewService.reject(observationId, req, currentUserId());
+            return Result.ok();
+        }
         reviewService.approve(observationId, req, currentUserId());
         return Result.ok();
     }
@@ -71,6 +76,10 @@ public class TeacherPlantController {
     @Operation(summary = "驳回（必须填意见）")
     @PostMapping("/reviews/{observationId}/reject")
     public Result<Void> reject(@PathVariable Long observationId, @Valid @RequestBody ReviewDecisionRequest req) {
+        if ("APPROVED".equalsIgnoreCase(req.action())) {
+            reviewService.approve(observationId, req, currentUserId());
+            return Result.ok();
+        }
         reviewService.reject(observationId, req, currentUserId());
         return Result.ok();
     }

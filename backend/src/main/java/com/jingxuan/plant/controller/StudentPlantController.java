@@ -36,6 +36,7 @@ public class StudentPlantController {
     private final com.jingxuan.plant.service.PlantDashboardService dashboardService;
     private final com.jingxuan.plant.service.PlantSuggestionService suggestionService;
     private final com.jingxuan.plant.service.PlantProfileService profileService;
+    private final com.jingxuan.plant.service.PlantReviewService reviewService;
 
     @Operation(summary = "创建观察记录草稿")
     @PostMapping("/observations")
@@ -141,6 +142,14 @@ public class StudentPlantController {
         return Result.ok(photoService.listByObservation(id));
     }
 
+
+    @Operation(summary = "我的观察最近一次审核意见（含驳回原因）")
+    @GetMapping("/observations/{id}/review")
+    public Result<com.jingxuan.plant.entity.PlantReview> latestReview(@PathVariable Long id) {
+        observationService.getMine(id, currentUserId());
+        java.util.List<com.jingxuan.plant.entity.PlantReview> history = reviewService.history(id);
+        return Result.ok(history.isEmpty() ? null : history.get(0));
+    }
 
     @Operation(summary = "我的公开展示花名")
     @GetMapping("/profile/display-name")
