@@ -1,17 +1,6 @@
-<template>
-  <view class="china-map">
-    <!-- #ifdef H5 -->
-    <view v-if="supported" id="china-map-canvas" class="china-map__canvas" :style="{ height: height + 'px' }"></view>
-    <view v-else class="china-map__fallback">当前环境不支持地图渲染，已切换为省份列表</view>
-    <!-- #endif -->
-    <!-- #ifndef H5 -->
-    <view class="china-map__fallback">当前平台暂使用省份列表模式（H5 / App 壳内置 2D 地图）</view>
-    <!-- #endif -->
-  </view>
-</template>
-
+<!-- eslint-disable -->
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, watch } from "vue"
+import { computed, onMounted, onUnmounted, ref } from "vue"
 
 export interface ProvinceStat {
   provinceCode: string
@@ -19,132 +8,80 @@ export interface ProvinceStat {
   observationCount: number | string
 }
 
-const props = withDefaults(defineProps<{ stats: ProvinceStat[]; height?: number; selected?: string | null }>(), {
+const props = withDefaults(defineProps<{ stats: ProvinceStat[]; height?: number }>(), {
   height: 320,
-  selected: null,
 })
 
 const emit = defineEmits<{ (event: "select", provinceCode: string, provinceName: string): void }>()
 
-// H5 之外（小程序/原生）不加载 echarts；H5 中由 WebView 渲染 DOM
-const isH5 = ref(false)
-const supported = ref(true)
-interface MapChartInstance {
-  setOption: (option: unknown) => void
-  on: (event: string, handler: (params: { name?: string }) => void) => void
-  resize: () => void
-  dispose: () => void
-}
-let chart: MapChartInstance | null = null
-let nameToCode: Record<string, string> = {}
+const failed = ref(false)
 
-function numberValue(v: number | string | null | undefined): number {
-  const n = typeof v === "number" ? v : Number(v || 0)
-  return Number.isFinite(n) ? n : 0
+/** 传给 renderjs 的数据（需可序列化） */
+const renderPayload = computed(() => ({
+  stats: props.stats.map((item) => ({
+    provinceCode: String(item.provinceCode || ""),
+    provinceName: String(item.provinceName || ""),
+    observationCount: Number(item.observationCount || 0),
+  })),
+  height: props.height,
+}))
+
+/** 去重：callMethod 与 DOM 事件可能同时到达，600ms 内相同省份只处理一次 */
+let lastSelect = { code: "", at: 0 }
+
+/** 点击省份（renderjs 通过 callMethod 或 window 事件调用本方法） */
+function onProvinceSelect(payload: { code?: string; name?: string }) {
+  const code = String(payload?.code || "")
+  if (!code) return
+  const now = Date.now()
+  if (code === lastSelect.code && now - lastSelect.at < 600) return
+  lastSelect = { code, at: now }
+  emit("select", code, String(payload?.name || code))
 }
 
-async function loadGeo(): Promise<unknown> {
-  const response = await fetch("/static/geo/china-provinces.json")
-  if (!response.ok) throw new Error("地图数据加载失败")
-  return response.json()
-}
+defineExpose({ onProvinceSelect, failed })
 
-async function render() {
-  if (!isH5.value) return
-  const container = document.getElementById("china-map-canvas")
-  if (!container) return
-  try {
-    const [echartsCore, charts, components, renderers] = await Promise.all([
-      import("echarts/core"),
-      import("echarts/charts"),
-      import("echarts/components"),
-      import("echarts/renderers"),
-    ])
-    echartsCore.use([charts.MapChart, components.TooltipComponent, components.VisualMapComponent, renderers.CanvasRenderer])
-    const geo = (await loadGeo()) as { features?: Array<{ properties?: { name?: string; adcode?: string | number } }> }
-    nameToCode = {}
-    for (const feature of geo.features || []) {
-      const name = String(feature.properties?.name || "")
-      const code = String(feature.properties?.adcode || "")
-      if (name && code) nameToCode[name] = code
-    }
-    echartsCore.registerMap("china", geo as never)
-    const data = props.stats.map((item) => ({
-      name: item.provinceName || "",
-      value: numberValue(item.observationCount),
-    }))
-    const maxValue = Math.max(1, ...data.map((d) => d.value))
-    if (!chart) {
-      chart = echartsCore.init(container) as unknown as MapChartInstance
-      chart.on("click", (params: { name?: string }) => {
-        const name = String(params?.name || "")
-        const code = nameToCode[name]
-        if (code) emit("select", code, name)
-      })
-    }
-    chart?.setOption({
-      tooltip: {
-        trigger: "item",
-        formatter: (params: { name?: string; value?: number }) =>
-          (params?.name || "") + "<br/>" + numberValue(params?.value) + " 条观察",
-      },
-      visualMap: {
-        min: 0,
-        max: maxValue,
-        left: 8,
-        bottom: 8,
-        itemWidth: 10,
-        itemHeight: 60,
-        text: ["多", "少"],
-        textStyle: { fontSize: 10, color: "#5b6b50" },
-        inRange: { color: ["#eef5e7", "#c3ddab", "#8fbf72", "#4f8a44", "#2f6b31"] },
-      },
-      series: [
-        {
-          type: "map",
-          map: "china",
-          roam: true,
-          zoom: 1.18,
-          label: { show: true, fontSize: 9, color: "#33512a" },
-          itemStyle: { borderColor: "#ffffff", borderWidth: 0.6, areaColor: "#eef4e8" },
-          emphasis: {
-            label: { show: true, fontSize: 10, fontWeight: "bold", color: "#1f3d18" },
-            itemStyle: { areaColor: "#ffd166" },
-          },
-          select: { itemStyle: { areaColor: "#e6a23c" } },
-          data,
-        },
-      ],
-    })
-  } catch (error) {
-    console.error("2D 地图渲染失败", error)
-    supported.value = false
-  }
+/** H5：renderjs 在视图层通过 window 自定义事件回传（uni 对象在 renderjs 中不可见） */
+function onWindowSelect(event: Event) {
+  onProvinceSelect((((event as CustomEvent).detail || {}) as { code?: string; name?: string }))
 }
 
 onMounted(() => {
-  // #ifdef H5
-  isH5.value = true
-  void render()
-  // #endif
+  if (typeof window !== "undefined" && typeof window.addEventListener === "function") {
+    window.addEventListener("china-map-select", onWindowSelect)
+  }
 })
 
 onUnmounted(() => {
-  chart?.dispose()
-  chart = null
+  if (typeof window !== "undefined" && typeof window.removeEventListener === "function") {
+    window.removeEventListener("china-map-select", onWindowSelect)
+  }
 })
-
-watch(
-  () => props.stats,
-  () => {
-    void render()
-  },
-  { deep: true },
-)
 </script>
 
+<template>
+  <!--
+    重要（实测结论）：
+    1) uni-app H5 的 <view> 不会把 id 透传到 DOM（document.getElementById 永远拿不到），
+       因此不能在逻辑层用 id 取容器初始化 ECharts；
+    2) renderjs 的 this.$el 指向「组件根元素」，所以承载地图的根节点必须自带高度，
+       否则 ECharts 会拿到 0 高度容器（canvas 高 0，看起来"地图没出来"）。
+    这里把高度、prop 绑定与 renderjs 渲染统一放在根节点上，H5 与原生 App 一致。
+  -->
+  <!-- @vue-ignore renderjs 模块由视图层执行，逻辑层类型系统无法推断 -->
+  <view
+    class="china-map"
+    :style="{ height: height + 'px' }"
+    :prop="renderPayload"
+    :change:prop="mapRender.render"
+  >
+    <view class="china-map__note">按省级聚合展示，点击省份查看该省学生作品</view>
+  </view>
+</template>
+
+<script module="mapRender" lang="renderjs" src="./china-map.renderjs.js"></script>
+
 <style scoped>
-.china-map { width: 100%; }
-.china-map__canvas { width: 100%; background: #f7faf4; border-radius: 14rpx; }
-.china-map__fallback { color: #999; font-size: 24rpx; padding: 30rpx 0; text-align: center; }
+.china-map { position: relative; width: 100%; background: #f7faf4; border-radius: 14rpx; overflow: hidden; }
+.china-map__note { position: absolute; left: 0; right: 0; bottom: 6rpx; text-align: center; color: #9aa79a; font-size: 20rpx; pointer-events: none; }
 </style>
