@@ -31,6 +31,17 @@ describe("mapLayout 精选卡片布局", () => {
     }
   })
 
+  it("卡片不会进入地图核心保护区（中央 25%~75%）", () => {
+    const narrow = { width: 1000, height: 600, cardWidth: 128, cardHeight: 102, gap: 10, padding: 14 }
+    const cards = layoutFeaturedCards([item("a", "510000", 480, 300), item("b", "330000", 520, 320)], narrow)
+    const guardLeft = narrow.width * 0.25
+    const guardRight = narrow.width * 0.75
+    for (const card of cards) {
+      const overlapsGuard = card.x + narrow.cardWidth > guardLeft && card.x < guardRight
+      expect(overlapsGuard).toBe(false)
+    }
+  })
+
   it("sideOf 以地图中线分侧", () => {
     expect(sideOf({ x: 499, y: 0 }, 1000)).toBe("left")
     expect(sideOf({ x: 501, y: 0 }, 1000)).toBe("right")

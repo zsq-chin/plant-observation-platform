@@ -1,5 +1,13 @@
 <template>
-  <router-link class="plant-work-card" :class="{ 'plant-work-card--featured': work.featured, 'plant-work-card--compact': compact }" :to="detailPath">
+  <router-link
+    class="plant-work-card"
+    :class="{
+      'plant-work-card--featured': work.featured,
+      'plant-work-card--compact': compact,
+      'plant-work-card--map': isMapVariant,
+    }"
+    :to="detailPath"
+  >
     <div class="plant-work-card__cover">
       <img v-if="work.coverUrl" :src="resolveMediaUrl(work.coverUrl)" :alt="coverAlt" loading="lazy" @error="onMediaError" />
       <span v-else class="plant-work-card__placeholder" aria-hidden="true">🌿</span>
@@ -21,7 +29,11 @@ import { onMediaError, resolveMediaUrl } from "@/utils/media"
 const props = defineProps<{
   work: MapFeaturedWork | ProvinceWorkRow
   compact?: boolean
+  /** map：全国地图外围精选卡（只保留图片 / 植物名 / 花名 · 省份，尺寸更小） */
+  variant?: "default" | "map"
 }>()
+
+const isMapVariant = computed(() => props.variant === "map")
 
 const plantName = computed(() => props.work.commonName || props.work.reportedCommonName || "未知植物")
 const detailPath = computed(() => "/plant/observations/" + String(props.work.observationId))
@@ -31,7 +43,9 @@ const coverAlt = computed(() => {
 })
 const metaLine = computed(() => {
   const who = props.work.displayName || props.work.submitterName || ""
-  const where = [props.work.provinceName, props.work.cityName].filter(Boolean).join(" · ")
+  const where = isMapVariant.value
+    ? props.work.provinceName || ""
+    : [props.work.provinceName, props.work.cityName].filter(Boolean).join(" · ")
   return [who, where].filter(Boolean).join(" · ") || "匿名观察"
 })
 </script>
@@ -49,4 +63,13 @@ const metaLine = computed(() => {
 .plant-work-card__meta { color: var(--text-muted); font-size: 12px; }
 .plant-work-card__desc { margin: 4px 0 0; color: var(--text-secondary); font-size: 12px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .plant-work-card--compact .plant-work-card__desc { display: none; }
+
+/* 全国地图精选卡：更小的图片、更弱的阴影与圆角，地图为主体 */
+.plant-work-card--map { border-radius: 10px; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12); }
+.plant-work-card--map .plant-work-card__cover { aspect-ratio: auto; height: 68px; }
+.plant-work-card--map .plant-work-card__body { padding: 5px 8px 7px; gap: 0; }
+.plant-work-card--map .plant-work-card__name { font-size: 13px; line-height: 1.3; }
+.plant-work-card--map .plant-work-card__meta { font-size: 11px; }
+.plant-work-card--map .plant-work-card__badge { top: 4px; left: 4px; padding: 0 6px; font-size: 10px; }
+.plant-work-card--map:hover { transform: translateY(-1px) scale(1.03); }
 </style>

@@ -31,6 +31,8 @@ export interface LayoutOptions {
   cardHeight: number
   gap?: number
   padding?: number
+  /** 地图核心保护区（横向比例，默认 25%~75%）：卡片尽量不进中央，避免遮挡中国主体 */
+  protectedArea?: { minX: number; maxX: number }
 }
 
 /** 卡片所在侧：默认按锚点在地图左右半区决定（西部左侧、东部右侧）。 */
@@ -53,7 +55,17 @@ export function layoutFeaturedCards(items: LayoutInput[], options: LayoutOptions
   const result: LayoutCard[] = []
   for (const side of ["left", "right"] as CardSide[]) {
     const column = sides[side].slice().sort((a, b) => a.anchor.y - b.anchor.y)
-    const x = side === "left" ? padding : Math.max(padding, options.width - options.cardWidth - padding)
+    const guard = options.protectedArea ?? { minX: 0.25, maxX: 0.75 }
+    const guardLeft = options.width * guard.minX
+    const guardRight = options.width * guard.maxX
+    let x = side === "left" ? padding : Math.max(padding, options.width - options.cardWidth - padding)
+    // 核心保护区：若卡片与中央区域相交，则按所在侧推到保护区外
+    if (x + options.cardWidth > guardLeft && x < guardRight) {
+      x =
+        side === "left"
+          ? Math.max(padding, guardLeft - options.cardWidth - 4)
+          : Math.min(Math.max(padding, options.width - options.cardWidth - padding), guardRight + 4)
+    }
     const maxY = Math.max(padding, options.height - options.cardHeight - padding)
     let cursor = padding
     const placed: LayoutCard[] = []

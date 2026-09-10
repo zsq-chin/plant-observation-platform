@@ -117,7 +117,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, reactive, ref } from "vue"
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import "maplibre-gl/dist/maplibre-gl.css"
 import { fetchCategories, fetchProvinces, fetchPublicClasses, type CategoryItem, type ClassItem, type RegionItem } from "@/api/plant"
@@ -217,9 +217,23 @@ const statsByCode = computed(() => {
   return map
 })
 
-/** 窄屏（手机/小窗）隐藏精选卡片与引导线，避免遮挡地图主体；改为在页面下方提示（P2 适配）。 */
+/**
+ * 全国精选展示数量随地图宽度变化（下一步计划 §4.4）：
+ * ≥1400px → 8；1100~1399 → 6；900~1099 → 4；<900 → 不显示外围精选卡。
+ */
+const featuredLimit = computed(() => {
+  const width = mapSize.width
+  if (width >= 1400) return 8
+  if (width >= 1100) return 6
+  if (width >= 900) return 4
+  return 0
+})
+
+/** 当前屏宽下实际展示的精选作品 */
+const visibleFeaturedWorks = computed(() => featuredWorks.value.slice(0, Math.max(1, featuredLimit.value)))
+
 const showFeaturedOverlay = computed(
-  () => stage.value === "CHINA_OVERVIEW" && featuredAnchors.value.length > 0 && mapSize.width >= 900,
+  () => stage.value === "CHINA_OVERVIEW" && featuredLimit.value > 0 && featuredAnchors.value.length > 0,
 )
 
 const reducedMotion = prefersReducedMotion()
@@ -253,6 +267,7 @@ async function loadStats() {
 /** 全国精选作品（每省 1 条）→ 计算屏幕锚点 → 地图高亮 */
 async function loadFeaturedWorks() {
   try {
+    // 一次取满 8 条，展示数量由屏宽决定（避免缩放窗口时重复请求）
     featuredWorks.value = await fetchFeaturedMapWorks(8)
   } catch {
     featuredWorks.value = []
@@ -260,13 +275,18 @@ async function loadFeaturedWorks() {
   computeFeaturedAnchors()
 }
 
+watch(featuredLimit, () => {
+  computeFeaturedAnchors()
+})
+
 function computeFeaturedAnchors() {
-  if (!featuredWorks.value.length) {
+  const works = visibleFeaturedWorks.value
+  if (!works.length) {
     featuredAnchors.value = []
     return
   }
   const anchors: typeof featuredAnchors.value = []
-  for (const work of featuredWorks.value) {
+  for (const work of works) {
     const code = String(work.provinceCode || "")
     if (!code) continue
     const center = plantMap.provinceCenter(code)
