@@ -1,5 +1,6 @@
-import { MEDIA_ORIGIN } from "@/config"
-import { PLANT_PLACEHOLDER } from "@/config"
+import { getMediaOrigin, PLANT_PLACEHOLDER } from "@/config"
+
+const mediaOrigin = () => getMediaOrigin()
 
 export function resolveMediaUrl(value?: string | null): string {
   if (!value) return PLANT_PLACEHOLDER
@@ -7,9 +8,9 @@ export function resolveMediaUrl(value?: string | null): string {
     return value
   }
   if (value.startsWith("/")) {
-    return MEDIA_ORIGIN + value
+    return mediaOrigin() + value
   }
-  return MEDIA_ORIGIN + "/media/plants/" + value
+  return mediaOrigin() + "/media/plants/" + value
 }
 
 export function fmtDate(value?: string | null): string {

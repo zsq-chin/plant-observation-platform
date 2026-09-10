@@ -1,5 +1,5 @@
 // uni.request 封装：自动带 JWT、统一 Result/Problem 处理
-import { API_BASE } from "@/config"
+import { getApiBase } from "@/config"
 import { clearAuth } from "@/utils/storage"
 
 type HttpMethod = "GET" | "POST" | "PUT" | "DELETE"
@@ -32,7 +32,7 @@ export function request<T>(method: HttpMethod, path: string, options: RequestOpt
   if (options.data !== undefined) header["Content-Type"] = "application/json"
   return new Promise<T>((resolve, reject) => {
     uni.request({
-      url: API_BASE + path,
+      url: getApiBase() + path,
       method,
       data: options.data as never,
       header,
@@ -90,7 +90,7 @@ export function uploadFile(path: string, filePath: string, form: Record<string, 
   const token = readToken()
   return new Promise((resolve, reject) => {
     uni.uploadFile({
-      url: API_BASE + path,
+      url: getApiBase() + path,
       filePath,
       name: "file",
       formData: form,
