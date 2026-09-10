@@ -15,7 +15,7 @@
     </view>
     <view class="sec">② 地点（主动选择，不获取定位）</view>
     <RegionPicker :location-text="location" @update:location="location = $event" @region="onRegion" />
-    <button type="primary" :loading="saving" @tap="saveDraft">保存草稿</button>
+    <button class="btn-primary" :loading="saving" @tap="saveDraft">保存草稿</button>
     <view class="hint">没网也能先存本地草稿：保存失败会自动放入“本地待同步”，回家联网后在我的植物里重试。</view>
   </view>
 </template>

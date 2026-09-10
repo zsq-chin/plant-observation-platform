@@ -6,7 +6,7 @@
     <view v-if="current === 'LOCAL'" class="local-list">
       <view v-for="d in localDrafts" :key="d.localId" class="card">
         <view>本地草稿 · {{ photosText(d) }} · {{ new Date(d.savedAt).toLocaleString() }}</view>
-        <button size="mini" type="primary" :loading="syncing === d.localId" @tap="sync(d.localId)">联网同步</button>
+        <button size="mini" class="btn-primary" :loading="syncing === d.localId" @tap="sync(d.localId)">联网同步</button>
       </view>
       <view v-if="!localDrafts.length" class="empty">没有本地草稿</view>
     </view>
@@ -18,9 +18,9 @@
         </view>
         <view class="muted">{{ r.provinceName || '' }} {{ r.cityName || '' }} {{ r.districtName || '' }} · {{ fmtDate(r.observedAt) }}</view>
         <view class="actions" @tap.stop>
-          <button v-if="r.status === 'DRAFT' || r.status === 'REJECTED'" size="mini" type="primary" @tap="submitIt(r)">提交审核</button>
+          <button v-if="r.status === 'DRAFT' || r.status === 'REJECTED'" size="mini" class="btn-primary" @tap="submitIt(r)">提交审核</button>
           <button v-if="r.status === 'SUBMITTED'" size="mini" @tap="withdrawIt(r)">撤回</button>
-          <button v-if="r.status === 'DRAFT' || r.status === 'REJECTED'" size="mini" type="warn" @tap="removeIt(r)">删除</button>
+          <button v-if="r.status === 'DRAFT' || r.status === 'REJECTED'" size="mini" class="btn-warn" @tap="removeIt(r)">删除</button>
         </view>
       </view>
       <view v-if="!rows.length" class="empty">暂无记录，去拍一株植物吧</view>
@@ -52,21 +52,20 @@ const tabs = [
   { value: "REJECTED", label: "被驳回" },
 ]
 
-let statusListener: (() => void) | null = null
+function onPlantStatus(status: string) {
+  current.value = status === "LOCAL" ? "LOCAL" : tabs.some((t) => t.value === status) ? status : "ALL"
+  load()
+}
 onLoad(() => {
-  statusListener = uni.$on("plant-status", (status: string) => {
-    current.value = status === "LOCAL" ? "LOCAL" : tabs.some((t) => t.value === status) ? status : "ALL"
-    load()
-  })
+  uni.$on("plant-status", onPlantStatus)
+})
+onUnload(() => {
+  uni.$off("plant-status", onPlantStatus)
 })
 onShow(() => {
   if (!auth.isLoggedIn) return uni.reLaunch({ url: "/pages/login/index" })
   load()
 })
-onUnload(() => {
-  if (statusListener) uni.$off("plant-status", statusListener)
-})
-
 function switchTab(value: string) {
   current.value = value
   load()
@@ -86,13 +85,26 @@ async function sync(localId: string) {
   if (!draft) return
   try {
     const created = await createObservation(draft.payload as Record<string, unknown>)
+    const failed: string[] = []
     for (const file of draft.localPhotoPaths) {
-      await uploadPhoto(String(created.id), file, "WHOLE").catch(() => undefined)
+      try {
+        await uploadPhoto(String(created.id), file, "WHOLE")
+      } catch (error) {
+        console.error("上传本地草稿图片失败:", file, error)
+        failed.push(file)
+      }
+    }
+    if (failed.length) {
+      // 保留本地草稿，避免照片丢失
+      uni.showToast({ title: "有 " + failed.length + " 张图片未同步，请重试", icon: "none" })
+      load()
+      return
     }
     removeLocalDraft(localId)
     uni.showToast({ title: "本地草稿已同步", icon: "success" })
     load()
-  } catch {
+  } catch (error) {
+    console.error("同步本地草稿失败", error)
     uni.showToast({ title: "同步失败，请检查网络后重试", icon: "none" })
   } finally {
     syncing.value = null
@@ -103,23 +115,42 @@ function continueEdit(r: MyObservation) {
   uni.navigateTo({ url: "/pages/observation-edit/index?id=" + r.id })
 }
 
+/** 提交审核：只有后端成功才提示成功，失败保持原状态并提示 */
 async function submitIt(r: MyObservation) {
-  await submitObservation(String(r.id)).catch(() => undefined)
-  uni.showToast({ title: "已提交", icon: "success" })
-  load()
+  try {
+    await submitObservation(String(r.id))
+    uni.showToast({ title: "已提交审核", icon: "success" })
+    await load()
+  } catch (error) {
+    console.error("提交审核失败", error)
+    uni.showToast({ title: "提交失败，请检查照片与观察信息后重试", icon: "none" })
+  }
 }
+
 async function withdrawIt(r: MyObservation) {
-  await withdrawObservation(String(r.id)).catch(() => undefined)
-  load()
+  try {
+    await withdrawObservation(String(r.id))
+    uni.showToast({ title: "已撤回为草稿", icon: "success" })
+    await load()
+  } catch (error) {
+    console.error("撤回失败", error)
+    uni.showToast({ title: "撤回失败，请重试", icon: "none" })
+  }
 }
+
 async function removeIt(r: MyObservation) {
   uni.showModal({
     title: "删除",
     content: "删除后照片与草稿将一并清除，确认？",
     success: async (res) => {
-      if (res.confirm) {
-        await deleteObservation(String(r.id)).catch(() => undefined)
-        load()
+      if (!res.confirm) return
+      try {
+        await deleteObservation(String(r.id))
+        uni.showToast({ title: "已删除", icon: "success" })
+        await load()
+      } catch (error) {
+        console.error("删除观察失败", error)
+        uni.showToast({ title: "删除失败，请重试", icon: "none" })
       }
     },
   })

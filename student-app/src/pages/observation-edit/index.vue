@@ -11,27 +11,27 @@
       <view v-if="photos.length < 10" class="cell add" @tap="pickMore">＋</view>
     </view>
     <view class="sec">植物</view>
-    <input class="ipt" v-model="speciesKeyword" placeholder="搜索银杏/桂花…" @input="searchSpecies" />
+    <input class="ipt" v-model="speciesKeyword" placeholder="搜索银杏/桂花…" @input="doSearchSpecies" />
     <view v-if="speciesOptions.length" class="species-list">
       <view v-for="s in speciesOptions" :key="String(s.id)" class="species-item" @tap="chooseSpecies(s)">
         {{ s.commonName }}<text v-if="s.scientificName" class="muted">（{{ s.scientificName }}）</text>
       </view>
     </view>
     <view class="flex">
-      <label class="check"><switch :checked="unknownPlant" @change="unknownPlant = $event.detail.value" /><text>未知植物（待鉴定）</text></label>
+      <label class="check"><switch :checked="unknownPlant" @change="onUnknownChange" /><text>未知植物（待鉴定）</text></label>
     </view>
     <view class="sec">地点与时间</view>
-    <RegionPicker :location-text="form.locationText" @update:location="form.locationText = $event" @region="onRegion" />
-    <picker mode="date" @change="form.observedAt = $event.detail.value">
+    <RegionPicker :location-text="String(form.locationText || '')" @update:location="onLocationText" @region="onRegion" />
+    <picker mode="date" @change="onDateChange">
       <view class="ipt">{{ form.observedAt || '选择观察日期' }}</view>
     </picker>
     <view class="sec">基础描述</view>
-    <textarea class="ipt area" v-model="form.description" placeholder="形态/生境/发现经过…" />
+    <textarea class="ipt area" :value="String(form.description || '')" @input="onDescriptionInput" placeholder="形态/生境/发现经过…" />
     <view class="sec">动态描述项</view>
     <DynamicPlantForm :fields="fields" :model="fieldValues" />
     <view class="actions">
-      <button size="mini" @tap="saveOnly">保存草稿</button>
-      <button size="mini" type="primary" :loading="submitting" @tap="submitNow">提交审核</button>
+      <button size="mini" :loading="saving" @tap="saveOnly">保存草稿</button>
+      <button size="mini" class="btn-primary" :loading="submitting" @tap="submitNow">提交审核</button>
     </view>
   </view>
 </template>
@@ -60,6 +60,7 @@ const speciesOptions = ref<SpeciesItem[]>([])
 const speciesKeyword = ref("")
 const unknownPlant = ref(false)
 const submitting = ref(false)
+const saving = ref(false)
 const form = reactive<Record<string, unknown>>({
   speciesId: null,
   reportedCommonName: "",
@@ -106,13 +107,39 @@ function onRegion(value: Record<string, unknown>) {
   Object.assign(form, value)
 }
 
-async function searchSpecies() {
-  if (!speciesKeyword.value.trim()) {
+function onUnknownChange(event: { detail?: { value?: boolean } } | Event) {
+  const detail = (event as { detail?: { value?: boolean } }).detail
+  unknownPlant.value = Boolean(detail?.value)
+}
+
+function onLocationText(value: string) {
+  form.locationText = value || ""
+}
+
+function onDescriptionInput(event: Event) {
+  const value = (event as { detail?: { value?: string } }).detail?.value
+  form.description = value ?? ""
+}
+
+function onDateChange(event: { detail?: { value?: string } } | Event) {
+  const detail = (event as { detail?: { value?: string } }).detail
+  form.observedAt = detail?.value || ""
+}
+
+/** 注意：不能与 api 的 searchSpecies 同名，否则会遮蔽导入并触发类型错误 */
+async function doSearchSpecies() {
+  const keyword = speciesKeyword.value.trim()
+  if (!keyword) {
     speciesOptions.value = []
     return
   }
-  const result = await searchSpecies(speciesKeyword.value.trim()).catch(() => null)
-  speciesOptions.value = result ? result.records.slice(0, 6) : []
+  try {
+    const result = await searchSpecies(keyword)
+    speciesOptions.value = result.records.slice(0, 6)
+  } catch (error) {
+    console.error("搜索物种失败", error)
+    speciesOptions.value = []
+  }
 }
 
 function chooseSpecies(s: SpeciesItem) {
@@ -124,14 +151,41 @@ function chooseSpecies(s: SpeciesItem) {
 
 async function pickMore() {
   const paths = await chooseAndCompressImages(10 - photos.value.length, "album").catch(() => [])
+  if (!paths.length) {
+    return // 用户取消选择
+  }
   if (!id.value) {
     uni.showToast({ title: "请先保存一次草稿再补图", icon: "none" })
     return
   }
-  for (const file of paths) {
-    await uploadPhoto(String(id.value), file, "WHOLE").catch(() => undefined)
+  await uploadPhotos(paths)
+}
+
+/** 上传多张照片：逐张收集失败项，失败必须让用户知道（禁止静默吞掉） */
+async function uploadPhotos(paths: string[]) {
+  if (!id.value) {
+    throw new Error("观察记录尚未创建")
   }
-  photos.value = await myObservationPhotos(id.value).catch(() => photos.value)
+  const failed: string[] = []
+  uni.showLoading({ title: "上传中…" })
+  try {
+    for (const file of paths) {
+      try {
+        await uploadPhoto(String(id.value), file, "WHOLE")
+      } catch (error) {
+        console.error("上传图片失败:", file, error)
+        failed.push(file)
+      }
+    }
+  } finally {
+    uni.hideLoading()
+  }
+  await refreshPhotos()
+  if (failed.length) {
+    uni.showToast({ title: "有 " + failed.length + " 张图片上传失败，请重试", icon: "none" })
+    return
+  }
+  uni.showToast({ title: "图片已上传", icon: "success" })
 }
 
 const organOptions = [
@@ -164,7 +218,7 @@ function openPhotoMenu(index: number) {
     itemList: p.isCover ? ["设为封面（已是封面）", "修改器官标签", "上移一位", "下移一位", "删除"] : ["设为封面", "修改器官标签", "上移一位", "下移一位", "删除"],
     success: (res) => {
       if (res.tapIndex === 0 && !p.isCover) {
-        setCoverPhoto(String(id.value), String(p.photoId)).then(refreshPhotos).catch(() => undefined)
+        void setCover(String(p.photoId))
       } else if (res.tapIndex === 1) {
         pickOrganFor(p)
       } else if (res.tapIndex === 2 || res.tapIndex === 3) {
@@ -191,28 +245,57 @@ function pickOrganFor(p: PhotoItem) {
             uni.showToast({ title: "器官已更新为" + organ.label, icon: "none" })
             p.organType = organ.value
           })
-          .catch(() => undefined)
+          .catch((error) => {
+            console.error("修改器官标签失败", error)
+            uni.showToast({ title: "器官标签修改失败", icon: "none" })
+          })
       }
     },
     fail: () => undefined,
   })
 }
 
-function movePhoto(index: number, delta: number) {
+async function setCover(photoId: string) {
+  if (!id.value) return
+  try {
+    await setCoverPhoto(String(id.value), photoId)
+    await refreshPhotos()
+    uni.showToast({ title: "已设为封面", icon: "success" })
+  } catch (error) {
+    console.error("设置封面失败", error)
+    uni.showToast({ title: "设置封面失败，请重试", icon: "none" })
+  }
+}
+
+async function movePhoto(index: number, delta: number) {
   const target = index + delta
   if (target < 0 || target >= photos.value.length || !id.value) return
+  const previous = [...photos.value]
   const arr = [...photos.value]
   const [item] = arr.splice(index, 1)
   arr.splice(target, 0, item)
   photos.value = arr
   const ids = arr.map((x) => String(x.photoId)).filter(Boolean)
-  reorderPhotos(String(id.value), ids).catch(() => undefined)
+  try {
+    await reorderPhotos(String(id.value), ids)
+  } catch (error) {
+    console.error("调整照片顺序失败", error)
+    photos.value = previous // 回滚本地顺序，避免与服务端不一致
+    uni.showToast({ title: "排序失败，请重试", icon: "none" })
+  }
 }
 
 async function removePhoto(p: PhotoItem) {
-  if (id.value && p.photoId) {
-    await deletePhoto(id.value, String(p.photoId)).catch(() => undefined)
-    photos.value = await myObservationPhotos(id.value).catch(() => [])
+  if (!id.value || !p.photoId) {
+    return
+  }
+  try {
+    await deletePhoto(id.value, String(p.photoId))
+    await refreshPhotos()
+    uni.showToast({ title: "照片已删除", icon: "success" })
+  } catch (error) {
+    console.error("删除照片失败", error)
+    uni.showToast({ title: "删除照片失败，请重试", icon: "none" })
   }
 }
 
@@ -240,29 +323,49 @@ function buildBody() {
   }
 }
 
+/**
+ * 保存草稿/修改：失败直接抛出异常，由调用方统一提示。
+ * 不在这里吞异常，避免「保存失败仍继续提交」造成假成功。
+ */
+async function persistObservation(): Promise<void> {
+  if (id.value) {
+    await updateObservation(String(id.value), buildBody())
+    return
+  }
+  const created = await createObservation(buildBody())
+  id.value = String(created.id)
+}
+
 async function saveOnly() {
+  if (saving.value) return
+  saving.value = true
   try {
-    if (id.value) {
-      await updateObservation(id.value, buildBody())
-    } else {
-      const created = await createObservation(buildBody())
-      id.value = String(created.id)
-    }
+    await persistObservation()
     uni.showToast({ title: "草稿已保存", icon: "success" })
-  } catch {
-    // 提示已由 request 层处理
+  } catch (error) {
+    console.error("保存植物观察失败", error)
+    uni.showToast({ title: "保存失败，请检查网络后重试", icon: "none" })
+  } finally {
+    saving.value = false
   }
 }
 
 async function submitNow() {
+  if (submitting.value) return
   submitting.value = true
   try {
-    await saveOnly()
-    if (id.value) {
-      await submitObservation(id.value)
-      uni.showToast({ title: "已提交审核", icon: "success" })
-      setTimeout(() => uni.switchTab({ url: "/pages/my-observations/index" }), 500)
+    // 保存失败会抛出异常，直接进入 catch，不会继续提交
+    await persistObservation()
+    if (!id.value) {
+      throw new Error("观察记录尚未创建")
     }
+    console.debug("submit observation", { id: id.value, body: buildBody() })
+    await submitObservation(String(id.value))
+    uni.showToast({ title: "已提交审核", icon: "success" })
+    setTimeout(() => uni.switchTab({ url: "/pages/my-observations/index" }), 500)
+  } catch (error) {
+    console.error("提交审核失败", error)
+    uni.showToast({ title: "提交失败，请重试", icon: "none" })
   } finally {
     submitting.value = false
   }

@@ -9,7 +9,7 @@
         <view class="input">{{ multiValue(field) || '请选择' }}</view>
       </picker>
       <switch v-else-if="field.fieldType === 'BOOLEAN'" :checked="boolValue(field)" @change="onBool(field, $event)" />
-      <picker v-else-if="field.fieldType === 'DATE'" mode="date" @change="onText(field, $event.detail.value)">
+      <picker v-else-if="field.fieldType === 'DATE'" mode="date" @change="onText(field, $event)">
         <view class="input">{{ value(field) || '选择日期' }}</view>
       </picker>
       <input v-else-if="field.fieldType === 'NUMBER'" type="number" class="input" :value="value(field)" @input="onInput(field, $event)" placeholder="请输入" />
@@ -50,22 +50,34 @@ function boolValue(field: FieldDef): boolean {
 function set(field: FieldDef, v: unknown) {
   props.model[field.id] = v
 }
-function onInput(field: FieldDef, event: { detail: { value: string } }) {
-  set(field, event.detail.value)
+/** 统一从 uni 事件中安全读取 detail（兼容 Event / InputEvent / 自定义 detail 类型） */
+function detailValue(event: unknown): unknown {
+  return (event as { detail?: { value?: unknown } } | undefined)?.detail?.value
 }
-function onText(field: FieldDef, text: string) {
-  set(field, text)
+
+function onInput(field: FieldDef, event: Event) {
+  set(field, String(detailValue(event) ?? ""))
 }
-function onBool(field: FieldDef, event: { detail: { value: boolean } }) {
-  set(field, event.detail.value)
+
+function onText(field: FieldDef, event: Event) {
+  set(field, String(detailValue(event) ?? ""))
 }
-function onPick(field: FieldDef, event: { detail: { value: number } }) {
+
+function onBool(field: FieldDef, event: Event) {
+  set(field, Boolean(detailValue(event)))
+}
+
+function onPick(field: FieldDef, event: Event) {
   const list = options(field)
-  set(field, list[event.detail.value] || "")
+  const index = Number(detailValue(event))
+  set(field, Number.isFinite(index) ? list[index] || "" : "")
 }
-function onMulti(field: FieldDef, event: { detail: { value: number[] } }) {
+
+function onMulti(field: FieldDef, event: Event) {
   const list = options(field)
-  const selected = (event.detail.value as unknown as number[]).map((i) => list[i]).filter(Boolean)
+  const raw = detailValue(event)
+  const indexes = Array.isArray(raw) ? raw.map(Number) : []
+  const selected = indexes.map((i) => list[i]).filter(Boolean)
   set(field, selected)
 }
 </script>

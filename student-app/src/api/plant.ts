@@ -38,6 +38,14 @@ export function myObservations(status: string | undefined, page = 1, size = 20) 
 export function myObservationDetail(id: string) {
   return get<MyObservation>("/api/student/plant/observations/" + id)
 }
+export interface ObservationReview {
+  action?: string | null
+  comment?: string | null
+  reviewedAt?: string | null
+}
+export function myObservationReview(id: string) {
+  return get<ObservationReview | null>("/api/student/plant/observations/" + id + "/review")
+}
 export function myObservationPhotos(id: string) {
   return get<PhotoItem[]>("/api/student/plant/observations/" + id + "/photos")
 }
@@ -100,6 +108,24 @@ export function fetchSearch(keyword: string) {
 export function fetchPublicObservation(id: string) {
   return get<ObsDetail>("/api/public/plant/observations/" + id)
 }
+/** 某省公开作品（点击地图省份后加载，下一步计划 §3.3） */
+export interface ProvinceWorkItem {
+  observationId: string
+  commonName?: string | null
+  reportedCommonName?: string | null
+  coverUrl?: string | null
+  provinceName?: string | null
+  cityName?: string | null
+  displayName?: string | null
+  submitterName?: string | null
+  featured?: boolean
+}
+export function fetchProvinceWorks(provinceCode: string, page = 1, size = 12) {
+  return get<PageResult<ProvinceWorkItem>>(
+    "/api/public/plant/map/provinces/" + provinceCode + "/works?page=" + page + "&size=" + size,
+  )
+}
+
 export function fetchProvinceSpecies(provinceCode: string) {
   return get<{ speciesId: string; commonName: string; observationCount: number | string }[]>("/api/public/plant/map/provinces/" + provinceCode + "/species")
 }

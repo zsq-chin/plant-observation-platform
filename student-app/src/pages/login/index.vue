@@ -4,7 +4,7 @@
     <view class="subtitle">学生端 · 记录身边植物</view>
     <input v-model="username" class="ipt" placeholder="学号 / 用户名" />
     <input v-model="password" class="ipt" password placeholder="密码" />
-    <button type="primary" :loading="loading" @tap="submit">登 录</button>
+    <button class="btn-primary" :loading="loading" @tap="submit">登 录</button>
     <view class="tip">账号密码登录；登录态安全保存在本机（不保存明文密码）。</view>
     <view class="server">
       <text class="server__label">服务器：{{ apiBaseLabel }}</text>

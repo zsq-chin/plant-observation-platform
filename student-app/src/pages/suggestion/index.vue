@@ -4,7 +4,7 @@
     <input v-model="commonName" class="ipt" placeholder="建议中文名（必填或填学名）" />
     <input v-model="scientificName" class="ipt" placeholder="学名（可选）" />
     <textarea v-model="description" class="ipt area" placeholder="描述叶/花/果特征、生境与发现地点…" />
-    <button type="primary" :loading="saving" @tap="submit">提交建议</button>
+    <button class="btn-primary" :loading="saving" @tap="submit">提交建议</button>
     <view class="sec">我的建议</view>
     <view v-for="s in mine" :key="String(s.id)" class="card">
       <view>{{ s.suggestedCommonName || s.suggestedScientificName || '-' }} <text class="tag">{{ s.status }}</text></view>
@@ -43,6 +43,7 @@ async function submit() {
       description: description.value.trim() || null,
     })
     uni.showToast({ title: "建议已提交，感谢贡献", icon: "success" })
+    // 提交成功后才清空表单，失败时保留用户输入
     commonName.value = ""
     scientificName.value = ""
     description.value = ""
@@ -56,6 +57,7 @@ async function submit() {
 
 <style scoped>
 .page { padding: 24rpx; display: flex; flex-direction: column; gap: 16rpx; }
+.btn-primary { background: #3f9b3f; color: #fff; }
 .intro { color: #777; }
 .ipt { border: 1rpx solid #ddd; border-radius: 10rpx; padding: 16rpx; background: #fff; }
 .area { height: 160rpx; }

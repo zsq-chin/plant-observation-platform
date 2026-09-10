@@ -13,7 +13,7 @@
       <view class="stat" @tap="goTab('APPROVED')"><text>{{ dash.approvedCount }}</text><text>已通过</text></view>
       <view class="stat" @tap="goTab('REJECTED')"><text>{{ dash.rejectedCount }}</text><text>被驳回</text></view>
     </view>
-    <button type="primary" class="big" @tap="capture">＋ 采集植物</button>
+    <button class="big btn-primary" @tap="capture">＋ 采集植物</button>
     <view class="sec-head">最新优秀观察</view>
     <view v-for="item in featured" :key="String(item.observationId)">
       <ObservationCard :item="item" @open="openDetail" />

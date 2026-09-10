@@ -59,15 +59,25 @@ export interface MyObservation {
   status: string
   speciesId?: string | null
   reportedCommonName?: string | null
+  reportedScientificName?: string | null
+  provinceCode?: string | null
   provinceName?: string | null
+  cityCode?: string | null
   cityName?: string | null
+  districtCode?: string | null
   districtName?: string | null
   locationText?: string | null
   observedAt?: string | null
   description?: string | null
   submitTime?: string | null
   createTime?: string | null
+  updateTime?: string | null
+  approvedTime?: string | null
+  publishedAt?: string | null
   identificationStatus?: string | null
+  featured?: number | boolean | null
+  isPublic?: number | null
+  viewCount?: number | null
 }
 
 export interface ObsDetail {
@@ -81,9 +91,18 @@ export interface ObsDetail {
   districtName?: string | null
   locationText?: string | null
   submitterName?: string | null
+  /** 公开端展示花名（V13） */
+  displayName?: string | null
   className?: string | null
   observedAt?: string | null
   description?: string | null
+  reportedCommonName?: string | null
+  reportedScientificName?: string | null
+  publishedAt?: string | null
+  averageRating?: number | null
+  ratingCount?: number | null
+  commentCount?: number | null
+  viewCount?: number | null
   featured?: boolean
   photos?: PhotoItem[]
   reviewComment?: string | null
