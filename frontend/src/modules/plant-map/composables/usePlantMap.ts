@@ -78,6 +78,8 @@ export function usePlantMap() {
       type: "fill",
       source: "provinces",
       paint: {
+        // 注意：分级着色必须用 step/match；此前误把多标签写在 case 中，
+        // 会导致整层样式校验失败被 MapLibre 丢弃（省份填充与台湾岛都不可见）。
         "fill-color": [
           "case",
           ["boolean", ["feature-state", "featured"], false],
@@ -86,15 +88,17 @@ export function usePlantMap() {
           "#f5c542",
           ["boolean", ["feature-state", "selected"], false],
           "#e8a33d",
-          ["number", ["get", "observationCount"], 0],
-          0, "#d8e7cc",
-          3, "#bfd9a6",
-          10, "#9cc47e",
-          30, "#74a95a",
-          100, "#4f8a44",
-          "#2f6b31",
+          [
+            "step",
+            ["number", ["get", "observationCount"], 0],
+            "#d8e7cc",
+            3, "#bfd9a6",
+            10, "#9cc47e",
+            30, "#74a95a",
+            100, "#4f8a44",
+          ],
         ],
-        "fill-opacity": 0.85,
+        "fill-opacity": 0.9,
       },
     })
     map.addLayer({
@@ -122,7 +126,7 @@ export function usePlantMap() {
       source: "provinces",
       paint: {
         "line-color": "#ffffff",
-        "line-width": 0.6,
+        "line-width": 0.9,
       },
     })
   }
@@ -186,6 +190,8 @@ export function usePlantMap() {
       maxZoom: 9,
     })
     map = instance
+    // 暴露实例供自动化验证与线上排查（只读使用，勿在业务代码依赖）
+    ;(window as unknown as Record<string, unknown>).__plantMap = instance
     await new Promise<void>((resolve, reject) => {
       instance.once("load", () => resolve())
       instance.once("error", () => reject(new Error("地图初始化失败")))
