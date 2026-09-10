@@ -1,0 +1,41 @@
+# 本文件仅用于本机开发；服务器部署不要加载它。
+# 启动：docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build
+
+services:
+  mailpit:
+    image: axllent/mailpit:v1.30.6@sha256:7f33095f80e901f6ad08028f06ca284aa58fe84942be5496008d041d3b9f4d4d
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8025:8025"
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    networks:
+      - mail
+      # Docker Desktop 不会为仅连接 internal 网络的容器建立宿主端口转发。
+      # 额外连接 proxy 只用于回环地址上的 8025 Web UI；SMTP 1025 仍未发布。
+      - proxy
+
+  backend:
+    depends_on:
+      mailpit:
+        condition: service_healthy
+    environment:
+      MAIL_HOST: mailpit
+      MAIL_PORT: 1025
+      MAIL_USERNAME: ""
+      MAIL_PASSWORD: ""
+      MAIL_FROM: noreply@jingxuan.test
+      MAIL_SMTP_AUTH: "false"
+      MAIL_SMTP_STARTTLS_ENABLE: "false"
+      MAIL_SMTP_STARTTLS_REQUIRED: "false"
+    networks:
+      mail:
+
+networks:
+  mail:
+    driver: bridge
+    internal: true

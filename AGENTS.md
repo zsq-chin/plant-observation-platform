@@ -95,6 +95,9 @@ git push  # 自动触发：API 契约、前端质量、后端单元/集成测试
 | `MAIL_USERNAME` | 邮箱用户名 | — |
 | `MAIL_PASSWORD` | 邮箱密码/授权码 | — |
 | `MAIL_FROM` | 发件人地址 | — |
+| `MAIL_SMTP_AUTH` | SMTP 是否启用认证 | `true` |
+| `MAIL_SMTP_STARTTLS_ENABLE` | SMTP 是否启用 STARTTLS | `true` |
+| `MAIL_SMTP_STARTTLS_REQUIRED` | SMTP 是否强制 STARTTLS | `true` |
 | `JINGXUAN_SECURITY_TRUSTED_PROXY_CIDRS` | 可采信 `X-Real-IP` 的反向代理 CIDR | `127.0.0.1/32,::1/128` |
 | `JINGXUAN_DOCKER_TRUSTED_PROXY_CIDRS` | Docker 固定 Nginx 代理 CIDR | `127.0.0.1/32,::1/128,172.31.250.2/32` |
 

@@ -1,0 +1,5 @@
+# 植物图片/地图数据不入库（V3 §4/§11；区域数据可由 scripts/import-plant-regions.py 重新生成）
+plant-media/
+geo/raw/
+geo/regions-import.sql
+../backup/

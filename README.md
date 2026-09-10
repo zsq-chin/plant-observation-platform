@@ -6,6 +6,15 @@
 
 ---
 
+## 植物平台（feature/plant-platform）
+
+本仓库正按《全国植物观察与交流平台详细改造清单 V2》与《详细设计说明书》改造为「全国植物观察与交流平台」：
+植物物种库 + 学生观察记录（多图/主动选择省市区/草稿-提交-教师审核）+ 公开展廊与全国省份地图 + 评论评分。
+详见 [docs/plant-platform-transformation.md](docs/plant-platform-transformation.md)。
+旧作品域（work/audit/score/rank/prize 等）代码与页面保留停用，未删除。
+
+---
+
 ## 技术栈
 
 | 层 | 技术 |
@@ -57,6 +66,16 @@ docker compose up -d
 # API 文档: http://localhost:8080/swagger-ui.html
 ```
 
+本机开发如需测试注册验证码邮件，显式加载 Mailpit 编排：
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build
+```
+
+此时在 `http://127.0.0.1:8025` 查看被本机截获的邮件。普通
+`docker compose up -d` 不会启动 Mailpit，服务器部署也不要加载
+`docker-compose.local.yml`。
+
 ### 手动部署（PM2）
 
 ```bash
@@ -107,6 +126,7 @@ npm run dev                          # Vite HMR（端口 5173，自动代理 /ap
 | 前端页面 | `http://服务器IP/` |
 | 后端 API | `http://127.0.0.1:8080/` |
 | API 文档 | `http://127.0.0.1:8080/swagger-ui.html` |
+| 本地 Mailpit 收件箱 | `http://127.0.0.1:8025/` |
 
 ### 测试账号
 
@@ -280,6 +300,10 @@ git push  # 自动触发：API 契约 → 前端质量 → 后端单元/集成�
 | `MAIL_PORT` | 邮件服务器端口 | `587` |
 | `MAIL_USERNAME` | 邮箱用户名 | — |
 | `MAIL_PASSWORD` | 邮箱密码/授权码 | — |
+| `MAIL_FROM` | 发件人地址 | — |
+| `MAIL_SMTP_AUTH` | SMTP 是否启用认证 | `true` |
+| `MAIL_SMTP_STARTTLS_ENABLE` | SMTP 是否启用 STARTTLS | `true` |
+| `MAIL_SMTP_STARTTLS_REQUIRED` | SMTP 是否强制 STARTTLS | `true` |
 | `JINGXUAN_SECURITY_TRUSTED_PROXY_CIDRS` | 裸机可信代理 CIDR | `127.0.0.1/32,::1/128` |
 | `JINGXUAN_DOCKER_TRUSTED_PROXY_CIDRS` | Docker 固定 Nginx 代理 CIDR | `127.0.0.1/32,::1/128,172.31.250.2/32` |
 

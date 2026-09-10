@@ -75,3 +75,13 @@ frontend/dist/assets/*.conflicted
 frontend/dist/assets/*.gz
 deploy/
 nginx-jingxuan.conf.bak
+
+# 本地数据资产与运行产物（不入库）
+data/geo/regions-import.sql
+
+# 备份产物（含数据库 dump，严禁提交）
+backup/
+
+# 临时文件与 uni-app 打包产物
+.tmp-reads/
+student-app/unpackage/
