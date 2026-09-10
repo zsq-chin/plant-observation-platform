@@ -26,6 +26,8 @@ public class ObservationPublicDetailVO {
     private String districtName;
     private String locationText;
     private String submitterName;
+    /** 公开展示花名（优先），未设置时与 submitterName 一致 */
+    private String displayName;
     private String className;
     private LocalDateTime observedAt;
     private String description;

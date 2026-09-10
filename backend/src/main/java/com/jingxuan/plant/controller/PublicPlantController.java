@@ -154,4 +154,19 @@ public class PublicPlantController {
             @RequestParam(defaultValue = "10") int size) {
         return Result.ok(mapService.speciesObservations(speciesId, provinceCode, page, size));
     }
+
+    @Operation(summary = "全国地图精选作品（每省最多 1 条，默认 8 条）")
+    @GetMapping("/map/featured-works")
+    public Result<List<GalleryItemVO>> featuredWorks(@RequestParam(defaultValue = "8") int size) {
+        return Result.ok(mapService.featuredWorks(size));
+    }
+
+    @Operation(summary = "某省学生作品（点击省份后加载）")
+    @GetMapping("/map/provinces/{provinceCode}/works")
+    public Result<PageResult<GalleryItemVO>> provinceWorks(
+            @PathVariable String provinceCode,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "12") int size) {
+        return Result.ok(mapService.provinceWorks(provinceCode, page, size));
+    }
 }

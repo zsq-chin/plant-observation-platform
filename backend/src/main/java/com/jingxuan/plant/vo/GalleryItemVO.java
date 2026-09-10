@@ -20,6 +20,8 @@ public class GalleryItemVO {
     private String provinceName;
     private String cityName;
     private String submitterName;
+    /** 公开展示花名（优先），未设置时与 submitterName 一致 */
+    private String displayName;
     private String className;
     private LocalDateTime observedAt;
     private String description;

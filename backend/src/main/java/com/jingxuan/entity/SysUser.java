@@ -24,6 +24,10 @@ public class SysUser extends BaseEntity {
     @TableField("real_name")
     private String realName;
 
+    /** 公开展示花名（V13）：为空时公开端按隐私策略回退展示真实姓名或掩码。 */
+    @TableField("display_name")
+    private String displayName;
+
     @TableField("role_id")
     private Integer roleId;
 

@@ -157,6 +157,109 @@ public class PlantMapService {
         return text != null && text.toLowerCase().contains(keyword.toLowerCase());
     }
 
+
+    /**
+     * 全国地图精选作品（V4 下一步计划 §4.1）：仅公开数据，同一省份最多 1 条，
+     * 先取 featured=1，不足时用最新公开记录补齐，保证区域分布均衡。
+     */
+    public List<GalleryItemVO> featuredWorks(int size) {
+        int limit = Math.max(1, Math.min(size, 24));
+        List<PlantObservation> rows = new ArrayList<>(observationMapper.selectList(Wrappers.<PlantObservation>lambdaQuery()
+                .eq(PlantObservation::getStatus, PlantStatuses.APPROVED)
+                .eq(PlantObservation::getIsPublic, 1)
+                .orderByDesc(PlantObservation::getFeatured)
+                .orderByDesc(PlantObservation::getPublishedAt)
+                .orderByDesc(PlantObservation::getId)));
+        // 精选优先 → 信息完整优先（有植物名/描述/城市）→ 发布时间（计划 §4.1「图片质量与信息完整优先」）
+        rows.sort((a, b) -> {
+            int featuredCompare = Integer.compare(featuredRank(a), featuredRank(b));
+            if (featuredCompare != 0) {
+                return featuredCompare;
+            }
+            int infoCompare = Integer.compare(infoGap(a), infoGap(b));
+            if (infoCompare != 0) {
+                return infoCompare;
+            }
+            if (a.getPublishedAt() != null && b.getPublishedAt() != null) {
+                return b.getPublishedAt().compareTo(a.getPublishedAt());
+            }
+            return Long.compare(b.getId() == null ? 0 : b.getId(), a.getId() == null ? 0 : a.getId());
+        });
+        Map<String, PlantObservation> pickedByProvince = new LinkedHashMap<>();
+        List<PlantObservation> pickedNoProvince = new ArrayList<>();
+        List<PlantObservation> picked = new ArrayList<>();
+        // 第一轮：精选优先（每省 1 条）
+        for (PlantObservation obs : rows) {
+            if (picked.size() >= limit) {
+                break;
+            }
+            if (!Integer.valueOf(1).equals(obs.getFeatured())) {
+                continue;
+            }
+            if (!acceptCandidate(obs, pickedByProvince, pickedNoProvince)) {
+                continue;
+            }
+            picked.add(obs);
+        }
+        // 第二轮：精选不足时用最新公开记录补齐（仍保持每省 1 条）
+        if (picked.size() < limit) {
+            for (PlantObservation obs : rows) {
+                if (picked.size() >= limit) {
+                    break;
+                }
+                if (Integer.valueOf(1).equals(obs.getFeatured()) || picked.contains(obs)) {
+                    continue;
+                }
+                if (!acceptCandidate(obs, pickedByProvince, pickedNoProvince)) {
+                    continue;
+                }
+                picked.add(obs);
+            }
+        }
+        return galleryService.toItems(picked);
+    }
+
+    private static int featuredRank(PlantObservation obs) {
+        return Integer.valueOf(1).equals(obs.getFeatured()) ? 0 : 1;
+    }
+
+    /** 信息缺失项数量：无植物名/无描述/无城市各计 1，越少越优先展示。 */
+    private static int infoGap(PlantObservation obs) {
+        int gap = 0;
+        if (obs.getSpeciesId() == null && !StringUtils.hasText(obs.getReportedCommonName())) {
+            gap++;
+        }
+        if (!StringUtils.hasText(obs.getDescription())) {
+            gap++;
+        }
+        if (!StringUtils.hasText(obs.getCityName()) && !StringUtils.hasText(obs.getCityCode())) {
+            gap++;
+        }
+        return gap;
+    }
+
+    private boolean acceptCandidate(PlantObservation obs, Map<String, PlantObservation> byProvince,
+                                    List<PlantObservation> noProvince) {
+        String code = obs.getProvinceCode();
+        if (!StringUtils.hasText(code)) {
+            if (noProvince.size() >= 2) {
+                return false;
+            }
+            noProvince.add(obs);
+            return true;
+        }
+        if (byProvince.containsKey(code)) {
+            return false;
+        }
+        byProvince.put(code, obs);
+        return true;
+    }
+
+    /** 某省学生作品（V4 下一步计划 §3.3/§7.3）：公开数据分页，精选与最新优先。 */
+    public PageResult<GalleryItemVO> provinceWorks(String provinceCode, int page, int size) {
+        return speciesObservations(null, provinceCode, page, size);
+    }
+
     private static class ProvinceBucket {
         private final String code;
         private final String name;

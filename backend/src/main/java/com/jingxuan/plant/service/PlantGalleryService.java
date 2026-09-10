@@ -162,6 +162,7 @@ public class PlantGalleryService {
         vo.setDistrictName(obs.getDistrictName());
         vo.setLocationText(obs.getLocationText());
         vo.setSubmitterName(loadUserName(obs.getSubmitterId()));
+        vo.setDisplayName(loadPublicName(obs.getSubmitterId()));
         vo.setClassName(obs.getClassNameSnapshot());
         vo.setObservedAt(obs.getObservedAt());
         vo.setDescription(obs.getDescription());
@@ -234,9 +235,11 @@ public class PlantGalleryService {
                 : speciesMapper.selectBatchIds(speciesIds).stream().collect(Collectors.toMap(PlantSpecies::getId, Function.identity()));
         List<Long> userIds = observations.stream().map(PlantObservation::getSubmitterId).filter(Objects::nonNull).distinct().toList();
         Map<Long, String> userNames = new HashMap<>();
+        Map<Long, String> publicNames = new HashMap<>();
         if (!userIds.isEmpty()) {
             for (SysUser user : sysUserMapper.selectBatchIds(userIds)) {
                 userNames.put(user.getId(), com.jingxuan.plant.PlantPrivacy.displayName(user.getRealName(), showRealName));
+                publicNames.put(user.getId(), com.jingxuan.plant.PlantPrivacy.publicName(user.getRealName(), user.getDisplayName(), showRealName));
             }
         }
         Map<Long, PlantPhoto> covers = loadCovers(obsIds);
@@ -260,6 +263,7 @@ public class PlantGalleryService {
             item.setProvinceName(obs.getProvinceName());
             item.setCityName(obs.getCityName());
             item.setSubmitterName(userNames.get(obs.getSubmitterId()));
+            item.setDisplayName(publicNames.get(obs.getSubmitterId()));
             item.setClassName(obs.getClassNameSnapshot());
             item.setObservedAt(obs.getObservedAt());
             item.setDescription(obs.getDescription());
@@ -360,6 +364,17 @@ public class PlantGalleryService {
         }
         PlantCategory category = categoryMapper.selectById(categoryId);
         return category != null ? category.getName() : null;
+    }
+
+    /** 公开端展示名：花名优先，未设置时按隐私策略回退（V13）。 */
+    private String loadPublicName(Long userId) {
+        if (userId == null) {
+            return null;
+        }
+        SysUser user = sysUserMapper.selectById(userId);
+        return user != null
+                ? com.jingxuan.plant.PlantPrivacy.publicName(user.getRealName(), user.getDisplayName(), showRealName)
+                : null;
     }
 
     private String loadUserName(Long userId) {

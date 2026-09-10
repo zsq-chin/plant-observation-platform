@@ -35,6 +35,7 @@ public class StudentPlantController {
     private final PlantFieldService fieldService;
     private final com.jingxuan.plant.service.PlantDashboardService dashboardService;
     private final com.jingxuan.plant.service.PlantSuggestionService suggestionService;
+    private final com.jingxuan.plant.service.PlantProfileService profileService;
 
     @Operation(summary = "创建观察记录草稿")
     @PostMapping("/observations")
@@ -140,6 +141,18 @@ public class StudentPlantController {
         return Result.ok(photoService.listByObservation(id));
     }
 
+
+    @Operation(summary = "我的公开展示花名")
+    @GetMapping("/profile/display-name")
+    public Result<String> myDisplayName() {
+        return Result.ok(profileService.currentDisplayName(currentUserId()));
+    }
+
+    @Operation(summary = "设置公开展示花名（公开端展示用，登录与后台仍用真实身份）")
+    @PutMapping("/profile/display-name")
+    public Result<String> updateDisplayName(@Valid @RequestBody com.jingxuan.plant.dto.DisplayNameRequest req) {
+        return Result.ok(profileService.updateDisplayName(currentUserId(), req.displayName()));
+    }
 
     @Operation(summary = "学生工作台统计")
     @GetMapping("/dashboard")

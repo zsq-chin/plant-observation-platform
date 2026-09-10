@@ -5,6 +5,17 @@ public final class PlantPrivacy {
 
     private PlantPrivacy() {}
 
+    /**
+     * 公开端展示名（V13 花名优先）：已设置花名时直接展示花名；
+     * 未设置花名时回退到 displayName 的隐私策略（真实姓名或掩码）。
+     */
+    public static String publicName(String realName, String nickname, boolean showRealName) {
+        if (nickname != null && !nickname.isBlank()) {
+            return nickname.trim();
+        }
+        return displayName(realName, showRealName);
+    }
+
     public static String displayName(String realName, boolean showRealName) {
         if (realName == null || realName.isBlank() || showRealName) {
             return realName;
