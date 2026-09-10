@@ -29,6 +29,9 @@ MAIL_PORT=587
 MAIL_USERNAME=
 MAIL_PASSWORD=
 MAIL_FROM=
+MAIL_SMTP_AUTH=true
+MAIL_SMTP_STARTTLS_ENABLE=true
+MAIL_SMTP_STARTTLS_REQUIRED=true
 `;
 
 const validComposeProxyBoundary = `
@@ -97,6 +100,25 @@ test("旧卷迁移 root 密码在模板中必须存在且保持为空", () => {
   assert.ok(
     validateEnvExample(withLegacyRootPassword).includes(
       ".env.example 中的 DB_LEGACY_ROOT_PASSWORD 必须保持为空",
+    ),
+  );
+});
+
+test("SMTP 安全开关必须存在且保持安全默认值", () => {
+  const withoutSmtpAuth = validEnvExample.replace("MAIL_SMTP_AUTH=true\n", "");
+  const disabledStarttls = validEnvExample.replace(
+    "MAIL_SMTP_STARTTLS_ENABLE=true\n",
+    "MAIL_SMTP_STARTTLS_ENABLE=false\n",
+  );
+
+  assert.ok(
+    validateEnvExample(withoutSmtpAuth).includes(
+      ".env.example 缺少必填键 MAIL_SMTP_AUTH",
+    ),
+  );
+  assert.ok(
+    validateEnvExample(disabledStarttls).includes(
+      ".env.example 中的 MAIL_SMTP_STARTTLS_ENABLE 必须为 true",
     ),
   );
 });

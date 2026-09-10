@@ -472,3 +472,96 @@ jobs:
         uses: actions/dependency-review-action@40c09b7dc99638e5ddb0bfd91c1673effc064d8a # v4.8.1
         with:
           fail-on-severity: high
+  plant-docker-e2e:
+    name: 植物平台 Docker E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      COMPOSE_PROJECT_NAME: jingxuan-plant-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+
+      - name: 配置 Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.13"
+
+      - name: 生成一次性测试凭据
+        shell: bash
+        run: |
+          node - <<"NODE"
+          const { appendFileSync } = require("node:fs");
+          const { randomBytes } = require("node:crypto");
+          const values = {
+            DB_ROOT_PASSWORD: randomBytes(24).toString("hex"),
+            DB_LEGACY_ROOT_PASSWORD: randomBytes(24).toString("hex"),
+            DB_PASSWORD: randomBytes(24).toString("hex"),
+            JWT_SECRET: randomBytes(48).toString("base64"),
+          };
+          for (const value of Object.values(values)) {
+            process.stdout.write("::add-mask::" + value + "\n");
+          }
+          appendFileSync(
+            process.env.GITHUB_ENV,
+            Object.entries(values).map(([key, value]) => key + "=" + value + "\n").join(""),
+          );
+          NODE
+
+      - name: 构建并启动后端与前端
+        shell: bash
+        run: docker compose up -d --build backend nginx
+
+      - name: 等待后端就绪并写入演示账号
+        shell: bash
+        run: |
+          set -euo pipefail
+          mysql_container="${COMPOSE_PROJECT_NAME}-mysql-1"
+          db_ready=false
+          for _ in $(seq 1 60); do
+            if docker exec -e MYSQL_PWD="$DB_PASSWORD" "$mysql_container" mysql -ujingxuan -N -e "SELECT 1" >/dev/null 2>&1; then
+              db_ready=true
+              break
+            fi
+            sleep 5
+          done
+          if [[ "$db_ready" != "true" ]]; then
+            docker compose logs mysql | tail -n 120
+            exit 1
+          fi
+          docker exec -e MYSQL_PWD="$DB_PASSWORD" "$mysql_container" mysql \
+            -ujingxuan --default-character-set=utf8mb4 jingxuan <<'SQL'
+          INSERT INTO sys_user (id, username, password, real_name, role_id, class_id, status, first_login) VALUES
+          (2097607023945412611, 'admin', '$2y$12$kPA2yToOV.VuyoQgL1PgzezYIslEosimPcrEyzKQ.OcuVdzRB/I4K', '系统管理员', 3, NULL, 1, 0),
+          (2097607023945412620, 'stu1', '$2y$12$kPA2yToOV.VuyoQgL1PgzezYIslEosimPcrEyzKQ.OcuVdzRB/I4K', '学生一', 1, 5, 1, 0),
+          (2097607023945412621, 'stu2', '$2y$12$kPA2yToOV.VuyoQgL1PgzezYIslEosimPcrEyzKQ.OcuVdzRB/I4K', '学生二', 1, 5, 1, 0),
+          (2097607023945412622, 'tea1', '$2y$12$kPA2yToOV.VuyoQgL1PgzezYIslEosimPcrEyzKQ.OcuVdzRB/I4K', '教师一', 2, NULL, 1, 0)
+          ON DUPLICATE KEY UPDATE status = 1;
+          'SQL'
+          ready=false
+          for _ in $(seq 1 60); do
+            if curl -sf http://127.0.0.1:8080/api/auth/login -X POST \
+              -H "Content-Type: application/json" \
+              -d '{"username":"admin","password":"admin123"}' >/dev/null 2>&1; then
+              ready=true
+              break
+            fi
+            sleep 5
+          done
+          if [[ "$ready" != "true" ]]; then
+            docker compose logs backend | tail -n 120
+            exit 1
+          fi
+
+      - name: 运行植物平台 E2E 主闭环
+        shell: bash
+        run: python -X utf8 scripts/plant-e2e-loop.py http://127.0.0.1:8080
+
+      - name: 收集失败日志
+        if: failure()
+        shell: bash
+        run: |
+          docker compose logs backend | tail -n 200 || true
+          docker compose logs nginx | tail -n 80 || true

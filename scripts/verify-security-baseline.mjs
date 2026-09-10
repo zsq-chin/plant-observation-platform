@@ -30,6 +30,9 @@ const requiredTemplateKeys = new Set([
   "MAIL_USERNAME",
   "MAIL_PASSWORD",
   "MAIL_FROM",
+  "MAIL_SMTP_AUTH",
+  "MAIL_SMTP_STARTTLS_ENABLE",
+  "MAIL_SMTP_STARTTLS_REQUIRED",
 ]);
 
 const keysThatMustStayEmpty = new Set([
@@ -48,6 +51,9 @@ const requiredTemplateDefaults = new Map([
   ["REDIS_HOST", "localhost"],
   ["REDIS_PORT", "6379"],
   ["JINGXUAN_UPLOAD_PATH", "./uploads"],
+  ["MAIL_SMTP_AUTH", "true"],
+  ["MAIL_SMTP_STARTTLS_ENABLE", "true"],
+  ["MAIL_SMTP_STARTTLS_REQUIRED", "true"],
   ["JINGXUAN_SECURITY_TRUSTED_PROXY_CIDRS", "127.0.0.1/32,::1/128"],
   [
     "JINGXUAN_DOCKER_TRUSTED_PROXY_CIDRS",

@@ -113,11 +113,11 @@ fi
 redis_ping || die "Redis PING 未通过。"
 ok "Redis 已在 127.0.0.1:6379 运行"
 
-# 开发环境未配置邮件时使用不可投递占位配置，确保应用能启动。
+# 未配置真实 SMTP 时保持凭据为空，由后端明确返回“邮箱服务未配置”。
+# 本机 Docker 邮件预览请使用 docker-compose.local.yml，不在这里注入伪凭据。
 if [[ -z ${MAIL_USERNAME:-} || -z ${MAIL_PASSWORD:-} ]]; then
-  export MAIL_HOST=127.0.0.1 MAIL_PORT=1025
-  export MAIL_USERNAME=dev-disabled@localhost MAIL_PASSWORD=dev-disabled
-  warn "未配置邮件凭据，验证码邮件功能不可用。"
+  unset MAIL_USERNAME MAIL_PASSWORD
+  warn "未配置邮件凭据；验证码接口将明确报错。需要本地邮件预览时请使用 Docker Mailpit 编排。"
 fi
 
 export SPRING_DATASOURCE_URL='jdbc:mysql://127.0.0.1:3306/jingxuan?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&allowMultiQueries=true'
