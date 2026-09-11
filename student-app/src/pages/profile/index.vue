@@ -9,6 +9,7 @@
     <view class="lift">
       <view class="card me">
         <view class="row">
+          <view class="avatar avatar--plain me__avatar">{{ avatarText }}</view>
           <view class="grow">
             <text class="h2">{{ auth.displayName }}</text>
             <text class="muted">{{ auth.className || '未绑定班级' }}</text>
@@ -18,19 +19,12 @@
       </view>
 
       <view class="card">
-        <view class="item" @tap="go('/pages/suggestion/index')">
-          <view class="item__icon">💡</view>
-          <text class="grow">新物种建议</text>
-          <text class="item__arrow">›</text>
-        </view>
-        <view class="item" @tap="go('/pages/notification/index')">
-          <view class="item__icon">🔔</view>
-          <text class="grow">消息通知</text>
-          <text class="item__arrow">›</text>
-        </view>
-        <view class="item" @tap="go('/pages/map/index')">
-          <view class="item__icon">🗺️</view>
-          <text class="grow">全国植物地图</text>
+        <view v-for="m in menus" :key="m.key" class="item" hover-class="item--press" @tap="go(m.url)">
+          <view class="item__icon">
+            <image class="item__icon-img" :src="'/static/icons/' + m.icon + '.svg'" mode="aspectFit" />
+          </view>
+          <text class="grow">{{ m.label }}</text>
+          <text v-if="m.badge" class="chip chip--danger">{{ m.badge }}</text>
           <text class="item__arrow">›</text>
         </view>
       </view>
@@ -44,16 +38,26 @@
 
 <script setup lang="ts">
 import { onShow } from "@dcloudio/uni-app"
-import { computed } from "vue"
+import { computed, ref } from "vue"
 import { useAuthStore } from "@/stores/auth"
 import AppHero from "@/components/AppHero.vue"
+import { fetchUnreadCount } from "@/api/plant"
 
 const auth = useAuthStore()
+const unread = ref(0)
 const avatarText = computed(() => (auth.displayName || "同").slice(0, 1))
 
+const menus = computed(() => [
+  { key: "suggest", icon: "bulb", label: "新物种建议", url: "/pages/suggestion/index", badge: "" },
+  { key: "notify", icon: "bell", label: "消息通知", url: "/pages/notification/index", badge: unread.value > 0 ? String(unread.value) : "" },
+  { key: "map", icon: "map", label: "全国植物地图", url: "/pages/map/index", badge: "" },
+])
+
 onShow(() => {
-  if (!auth.isLoggedIn) uni.reLaunch({ url: "/pages/login/index" })
+  if (!auth.isLoggedIn) return uni.reLaunch({ url: "/pages/login/index" })
+  fetchUnreadCount().then((c) => (unread.value = c)).catch(() => undefined)
 })
+
 function go(url: string) {
   uni.navigateTo({ url })
 }
@@ -73,7 +77,8 @@ function logout() {
 
 <style scoped>
 .me { gap: 0; }
-.card .item { background: transparent; box-shadow: none; padding: 22rpx 0; border-bottom: 1rpx solid #f1f5ef; }
+.me__avatar { width: 92rpx; height: 92rpx; font-size: 34rpx; }
+.card .item { background: transparent; box-shadow: none; padding: 22rpx 0; border-radius: 16rpx; border-bottom: 1rpx solid #f1f5ef; }
 .card .item:last-child { border-bottom: none; }
 .version { text-align: center; color: #a8b3aa; font-size: 22rpx; }
 .version--sub { margin-top: -12rpx; font-size: 21rpx; }

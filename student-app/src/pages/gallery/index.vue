@@ -2,13 +2,13 @@
   <view class="page page--hero">
     <AppHero title="植物展廊" :subtitle="subtitle">
       <template #right>
-        <view class="hero-tag">🌏 全国</view>
+        <view class="hero-tag">全国公开</view>
       </template>
     </AppHero>
 
     <view class="lift">
       <view class="search">
-        <text class="search__icon">🔍</text>
+        <image class="search__icon" src="/static/icons/search.svg" mode="aspectFit" />
         <input
           class="search__ipt"
           v-model="keyword"
@@ -31,7 +31,7 @@
 
       <EmptyState
         v-if="!rows.length"
-        :icon="loading ? '⏳' : '🖼️'"
+        :icon="loading ? 'cloud' : 'gallery'"
         :title="loading ? '正在加载…' : '暂无公开观察'"
         :hint="loading ? '' : '换一个关键词，或先去采集一株植物'"
       />
@@ -124,7 +124,7 @@ function openDetail(id: string) {
   padding: 20rpx 26rpx;
   box-shadow: 0 8rpx 24rpx rgba(31, 45, 36, 0.07);
 }
-.search__icon { font-size: 28rpx; }
+.search__icon { width: 32rpx; height: 32rpx; opacity: 0.6; }
 .search__ipt { flex: 1; font-size: 28rpx; }
 .search__clear { color: #b6c0b8; font-size: 26rpx; padding: 0 6rpx; }
 .search__ph { color: #a8b3aa; }

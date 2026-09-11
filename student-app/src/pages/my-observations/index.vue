@@ -25,36 +25,49 @@
       <view v-if="current === 'LOCAL'" class="list">
         <view v-for="d in localDrafts" :key="d.localId" class="card">
           <view class="row">
-            <text class="h3">📥 本地草稿</text>
+            <view class="item__icon">
+              <image class="item__icon-img" src="/static/icons/cloud.svg" mode="aspectFit" />
+            </view>
+            <text class="h3 grow">本地草稿</text>
             <text class="chip chip--warn">{{ photosText(d) }}</text>
           </view>
           <text class="muted">{{ formatTime(d.savedAt) }}</text>
           <button size="mini" class="btn-primary" :loading="syncing === d.localId" @tap="sync(d.localId)">联网同步</button>
         </view>
-        <EmptyState v-if="!localDrafts.length" icon="📭" title="没有本地草稿" hint="弱网下采集会自动存到本机" />
+        <EmptyState v-if="!localDrafts.length" icon="cloud" title="没有本地草稿" hint="弱网下采集会自动存到本机，联网后在这里同步" />
       </view>
 
       <template v-else>
-        <view v-for="r in rows" :key="String(r.id)" class="card ocard" @tap="continueEdit(r)">
-          <view class="row">
-            <text class="h3 grow ellipsis">{{ r.reportedCommonName || '待鉴定 / 未命名' }}</text>
-            <text class="chip" :class="statusChip(r.status)">{{ STATUS_LABELS[r.status] || r.status }}</text>
-          </view>
-          <view class="row row--tight">
-            <text class="muted ellipsis">📍 {{ place(r) }}</text>
-          </view>
-          <view class="row">
-            <text class="muted">🗓 {{ fmtDate(r.observedAt) }}</text>
-            <view class="actions" @tap.stop>
-              <button v-if="r.status === 'DRAFT' || r.status === 'REJECTED'" size="mini" class="btn-primary" @tap="submitIt(r)">提交审核</button>
-              <button v-if="r.status === 'SUBMITTED'" size="mini" class="btn-ghost" @tap="withdrawIt(r)">撤回</button>
-              <button v-if="r.status === 'DRAFT' || r.status === 'REJECTED'" size="mini" class="btn-warn" @tap="removeIt(r)">删除</button>
+        <view v-for="r in rows" :key="String(r.id)" class="card ocard" hover-class="item--press" @tap="continueEdit(r)">
+          <view class="ocard__head">
+            <image class="ocard__cover" :src="resolveMediaUrl(r.coverUrl)" mode="aspectFill" />
+            <view class="grow">
+              <view class="row">
+                <text class="h3 grow ellipsis">{{ r.reportedCommonName || '待鉴定 / 未命名' }}</text>
+                <text class="chip" :class="statusChip(r.status)">{{ STATUS_LABELS[r.status] || r.status }}</text>
+              </view>
+              <view class="ocard__meta">
+                <image class="ocard__icon" src="/static/icons/location.svg" mode="aspectFit" />
+                <text class="muted ellipsis">{{ place(r) }}</text>
+              </view>
+              <view class="ocard__meta">
+                <image class="ocard__icon" src="/static/icons/calendar.svg" mode="aspectFit" />
+                <text class="muted">{{ fmtDate(r.observedAt) }}</text>
+                <text v-if="r.photoCount" class="chip chip--plain">{{ r.photoCount }} 张照片</text>
+                <text v-else class="chip chip--warn">无照片</text>
+              </view>
             </view>
+          </view>
+          <view class="actions" @tap.stop>
+            <button v-if="r.status === 'DRAFT' || r.status === 'REJECTED'" size="mini" class="btn-primary" @tap="submitIt(r)">提交审核</button>
+            <button v-if="r.status === 'SUBMITTED'" size="mini" class="btn-ghost" @tap="withdrawIt(r)">撤回</button>
+            <button v-if="r.status === 'DRAFT' || r.status === 'REJECTED'" size="mini" class="btn-warn" @tap="removeIt(r)">删除</button>
+            <text class="actions__edit">继续编辑 ›</text>
           </view>
         </view>
         <EmptyState
           v-if="!rows.length"
-          icon="🌱"
+          icon="plant"
           title="这里还空着"
           hint="点右上角「＋」或底部「采集」记录第一株植物"
         />
@@ -71,7 +84,7 @@ import { createObservation, deleteObservation, myObservations, submitObservation
 import AppHero from "@/components/AppHero.vue"
 import EmptyState from "@/components/EmptyState.vue"
 import { readLocalDrafts, removeLocalDraft } from "@/utils/storage"
-import { fmtDate, STATUS_LABELS } from "@/utils/media"
+import { fmtDate, resolveMediaUrl, STATUS_LABELS } from "@/utils/media"
 import type { LocalDraft } from "@/utils/storage"
 import type { MyObservation } from "@/types/models"
 
@@ -239,6 +252,18 @@ function photosText(d: LocalDraft) {
   font-weight: 600;
 }
 .list { display: flex; flex-direction: column; }
-.ocard { margin-bottom: 18rpx; }
-.actions { display: flex; gap: 12rpx; }
+.ocard { margin-bottom: 18rpx; gap: 16rpx; }
+.ocard__head { display: flex; gap: 20rpx; align-items: flex-start; }
+.ocard__cover {
+  width: 168rpx;
+  height: 168rpx;
+  border-radius: 20rpx;
+  background: #eef4ea;
+  flex-shrink: 0;
+}
+.ocard__meta { display: flex; align-items: center; gap: 8rpx; margin-top: 8rpx; }
+.ocard__icon { width: 24rpx; height: 24rpx; opacity: 0.55; flex-shrink: 0; }
+.actions { display: flex; align-items: center; gap: 12rpx; }
+.actions__edit { margin-left: auto; font-size: 22rpx; color: #a8b3aa; }
+.ellipsis { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 </style>

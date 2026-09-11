@@ -11,11 +11,11 @@
           <image :src="p" mode="aspectFill" class="photo" />
           <text class="del" @tap="remove(i)">×</text>
         </view>
-        <view v-if="photos.length < 10" class="cell add" @tap="pick('camera')">
-          <text class="add__icon">📷</text><text class="add__text">拍摄</text>
+        <view v-if="photos.length < 10" class="cell add" hover-class="add--press" @tap="pick('camera')">
+          <image class="add__icon" src="/static/icons/camera.svg" mode="aspectFit" /><text class="add__text">拍摄</text>
         </view>
-        <view v-if="photos.length < 10" class="cell add" @tap="pick('album')">
-          <text class="add__icon">🖼️</text><text class="add__text">相册</text>
+        <view v-if="photos.length < 10" class="cell add" hover-class="add--press" @tap="pick('album')">
+          <image class="add__icon" src="/static/icons/photos.svg" mode="aspectFit" /><text class="add__text">相册</text>
         </view>
       </view>
     </view>
@@ -37,8 +37,8 @@
 
     <button class="btn-primary btn-block" :loading="saving" @tap="saveDraft">保存草稿</button>
     <view class="hint">
-      <text class="hint__icon">💡</text>
-      <text class="hint__text">没网也能先存本地草稿：保存失败会自动放入「本地待同步」，回家联网后在“我的植物”里重试。</text>
+      <image class="hint__icon" src="/static/icons/bulb.svg" mode="aspectFit" />
+      <text class="hint__text">没网也能先存本地草稿：保存失败会自动放入「本地待同步」，回家联网后在"我的植物"里重试。</text>
     </view>
   </view>
 </template>
@@ -149,7 +149,8 @@ function uploadPhotoToServer(id: string, filePath: string) {
   border: 2rpx dashed #c6d6c2; border-radius: 18rpx; display: flex; flex-direction: column;
   align-items: center; justify-content: center; gap: 6rpx; background: #fbfdfa;
 }
-.add__icon { font-size: 42rpx; }
+.add__icon { width: 46rpx; height: 46rpx; }
+.add--press { background: #f2f8ee; }
 .add__text { font-size: 24rpx; color: #7b8a80; }
 .organs { display: flex; flex-wrap: wrap; gap: 14rpx; margin-top: 8rpx; }
 .pill {
@@ -157,6 +158,6 @@ function uploadPhotoToServer(id: string, filePath: string) {
 }
 .pill--on { background: linear-gradient(135deg, #4aa64a 0%, #2f7a34 100%); color: #fff; font-weight: 600; }
 .hint { display: flex; gap: 12rpx; padding: 0 8rpx; }
-.hint__icon { font-size: 26rpx; }
+.hint__icon { width: 30rpx; height: 30rpx; flex-shrink: 0; margin-top: 2rpx; }
 .hint__text { flex: 1; color: #8a968c; font-size: 23rpx; line-height: 1.6; }
 </style>

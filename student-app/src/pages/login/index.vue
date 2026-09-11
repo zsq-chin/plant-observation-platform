@@ -4,7 +4,9 @@
     <view class="login__deco login__deco--b"></view>
 
     <view class="brand">
-      <view class="brand__logo">🌿</view>
+      <view class="brand__logo">
+        <image class="brand__logo-img" src="/static/icons/white/plant.svg" mode="aspectFit" />
+      </view>
       <text class="brand__title">全国植物观察与交流平台</text>
       <text class="brand__sub">学生端 · 记录身边的植物</text>
     </view>
@@ -93,8 +95,9 @@ async function submit() {
 .brand { display: flex; flex-direction: column; align-items: center; gap: 12rpx; position: relative; }
 .brand__logo {
   width: 128rpx; height: 128rpx; border-radius: 36rpx; background: rgba(255, 255, 255, 0.16);
-  display: flex; align-items: center; justify-content: center; font-size: 64rpx; margin-bottom: 8rpx;
+  display: flex; align-items: center; justify-content: center; margin-bottom: 8rpx;
 }
+.brand__logo-img { width: 68rpx; height: 68rpx; }
 .brand__title { font-size: 42rpx; font-weight: 700; color: #ffffff; text-align: center; }
 .brand__sub { font-size: 25rpx; color: rgba(255, 255, 255, 0.8); }
 .panel {

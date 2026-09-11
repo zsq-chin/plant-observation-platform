@@ -24,7 +24,7 @@
       <text v-if="s.suggestedScientificName" class="muted sci">{{ s.suggestedScientificName }}</text>
       <text v-if="s.reviewComment" class="muted">教师回复：{{ s.reviewComment }}</text>
     </view>
-    <EmptyState v-if="!mine.length" icon="💡" title="还没有提交过建议" hint="发现新物种时提交，教师会尽快确认" />
+    <EmptyState v-if="!mine.length" icon="bulb" title="还没有提交过建议" hint="发现新物种时提交，教师会尽快确认" />
   </view>
 </template>
 

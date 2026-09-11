@@ -37,7 +37,10 @@
       <RegionPicker :location-text="String(form.locationText || '')" @update:location="onLocationText" @region="onRegion" />
       <picker mode="date" @change="onDateChange">
         <view class="ipt picker-row">
-          <text>🗓 {{ form.observedAt || '选择观察日期' }}</text>
+          <view class="picker-row__left">
+            <image class="picker-row__icon" src="/static/icons/calendar.svg" mode="aspectFit" />
+            <text>{{ form.observedAt || '选择观察日期' }}</text>
+          </view>
           <text class="item__arrow">›</text>
         </view>
       </picker>
@@ -425,5 +428,7 @@ async function submitNow() {
 .species-item { padding: 20rpx 22rpx; border-bottom: 1rpx solid #f1f5ef; display: flex; align-items: baseline; }
 .species-item:last-child { border-bottom: none; }
 .picker-row { display: flex; align-items: center; justify-content: space-between; margin-top: 8rpx; }
+.picker-row__left { display: flex; align-items: center; gap: 12rpx; }
+.picker-row__icon { width: 30rpx; height: 30rpx; opacity: 0.6; }
 .actions { display: flex; gap: 20rpx; }
 </style>

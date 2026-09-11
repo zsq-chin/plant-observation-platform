@@ -4,11 +4,21 @@
       <template #right>
         <view class="avatar" @tap="goProfile">{{ avatarText }}</view>
       </template>
+      <view class="hero-actions">
+        <view class="hero-action" @tap="capture">
+          <image class="hero-action__icon" src="/static/icons/white/camera.svg" mode="aspectFit" />
+          <text class="hero-action__text">采集植物</text>
+        </view>
+        <view class="hero-action" @tap="goMap">
+          <image class="hero-action__icon" src="/static/icons/white/map.svg" mode="aspectFit" />
+          <text class="hero-action__text">全国地图</text>
+        </view>
+      </view>
     </AppHero>
 
     <view class="lift">
       <view v-if="pendingLocal > 0" class="notice" @tap="goLocalDrafts">
-        <text class="notice__icon">☁️</text>
+        <image class="notice__icon" src="/static/icons/cloud.svg" mode="aspectFit" />
         <view class="grow">
           <text class="notice__title">有 {{ pendingLocal }} 条本地草稿待同步</text>
           <text class="notice__hint">点击联网同步，避免照片丢失</text>
@@ -17,41 +27,17 @@
       </view>
 
       <view class="stats" v-if="dash">
-        <view class="stat stat--draft" @tap="goTab('DRAFT')">
+        <view class="stat stat--draft" hover-class="stat--press" @tap="goTab('DRAFT')">
           <text class="stat__num">{{ dash.draftCount }}</text><text class="stat__label">待完善</text>
         </view>
-        <view class="stat stat--submitted" @tap="goTab('SUBMITTED')">
+        <view class="stat stat--submitted" hover-class="stat--press" @tap="goTab('SUBMITTED')">
           <text class="stat__num">{{ dash.submittedCount }}</text><text class="stat__label">待审核</text>
         </view>
-        <view class="stat stat--approved" @tap="goTab('APPROVED')">
+        <view class="stat stat--approved" hover-class="stat--press" @tap="goTab('APPROVED')">
           <text class="stat__num">{{ dash.approvedCount }}</text><text class="stat__label">已通过</text>
         </view>
-        <view class="stat stat--rejected" @tap="goTab('REJECTED')">
+        <view class="stat stat--rejected" hover-class="stat--press" @tap="goTab('REJECTED')">
           <text class="stat__num">{{ dash.rejectedCount }}</text><text class="stat__label">被驳回</text>
-        </view>
-      </view>
-
-      <button class="btn-primary btn-block cta" @tap="capture">📷 采集一株植物</button>
-
-      <view class="sec"><text class="sec__title">快捷入口</text></view>
-      <view class="tiles">
-        <view class="tile" @tap="goMap">
-          <text class="tile__icon">🗺️</text><text class="tile__text">全国地图</text>
-        </view>
-        <view class="tile" @tap="goGallery">
-          <text class="tile__icon">🖼️</text><text class="tile__text">植物展廊</text>
-        </view>
-        <view class="tile" @tap="goMine">
-          <text class="tile__icon">🌿</text><text class="tile__text">我的植物</text>
-        </view>
-        <view class="tile" @tap="goNotifications">
-          <text class="tile__icon">🔔</text><text class="tile__text">消息通知</text>
-        </view>
-        <view class="tile" @tap="goSuggestion">
-          <text class="tile__icon">💡</text><text class="tile__text">新物种建议</text>
-        </view>
-        <view class="tile" @tap="goProfile">
-          <text class="tile__icon">👤</text><text class="tile__text">我的</text>
         </view>
       </view>
 
@@ -62,7 +48,17 @@
       <view v-for="item in featured" :key="String(item.observationId)">
         <ObservationCard :item="item" @open="openDetail" />
       </view>
-      <EmptyState v-if="!featured.length" icon="🌼" title="还没有优秀观察" hint="先去采集，通过审核后就有机会登上首页" />
+      <EmptyState v-if="!featured.length" icon="plant" title="还没有优秀观察" hint="先去采集，通过审核后就有机会登上首页" />
+
+      <view class="sec"><text class="sec__title">快捷入口</text></view>
+      <view class="tiles">
+        <view class="tile" v-for="t in tiles" :key="t.key" hover-class="tile--press" @tap="t.action()">
+          <view class="tile__badge">
+            <image class="tile__icon" :src="'/static/icons/' + t.icon + '.svg'" mode="aspectFit" />
+          </view>
+          <text class="tile__text">{{ t.label }}</text>
+        </view>
+      </view>
     </view>
   </view>
 </template>
@@ -132,9 +128,32 @@ function goSuggestion() {
 function goProfile() {
   uni.switchTab({ url: "/pages/profile/index" })
 }
+
+const tiles = [
+  { key: "map", icon: "map", label: "全国地图", action: goMap },
+  { key: "gallery", icon: "gallery", label: "植物展廊", action: goGallery },
+  { key: "mine", icon: "plant", label: "我的植物", action: goMine },
+  { key: "notify", icon: "bell", label: "消息通知", action: goNotifications },
+  { key: "suggest", icon: "bulb", label: "物种建议", action: goSuggestion },
+  { key: "profile", icon: "user", label: "我的", action: goProfile },
+]
 </script>
 
 <style scoped>
+.hero-actions { display: flex; gap: 18rpx; margin-top: 28rpx; position: relative; }
+.hero-action {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10rpx;
+  padding: 20rpx 0;
+  border-radius: 20rpx;
+  background: rgba(255, 255, 255, 0.18);
+  border: 1rpx solid rgba(255, 255, 255, 0.22);
+}
+.hero-action__icon { width: 34rpx; height: 34rpx; }
+.hero-action__text { font-size: 27rpx; color: #ffffff; font-weight: 600; }
 .notice {
   display: flex;
   align-items: center;
@@ -144,8 +163,9 @@ function goProfile() {
   border-radius: 22rpx;
   padding: 22rpx 24rpx;
 }
-.notice__icon { font-size: 36rpx; }
+.notice__icon { width: 40rpx; height: 40rpx; }
 .notice__title { display: block; font-size: 28rpx; color: #a86a15; font-weight: 600; }
 .notice__hint { display: block; font-size: 22rpx; color: #bd9146; }
-.cta { margin-top: 6rpx; }
+.stat--press { background: #fbfdfa; }
+.tile--press { background: #fbfdfa; transform: scale(0.98); }
 </style>

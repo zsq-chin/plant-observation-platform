@@ -24,15 +24,21 @@
           <text v-if="featured" class="chip chip--warn">★ 优秀</text>
         </view>
         <view class="meta">
-          <text class="meta__row">📍 {{ viewPlace }}</text>
-          <text v-if="observerText" class="meta__row">👤 {{ observerText }}</text>
-          <text v-if="viewObservedAt" class="meta__row">🗓 {{ fmtDate(viewObservedAt) }}</text>
+          <view class="meta__row">
+            <image class="meta__icon" src="/static/icons/location.svg" mode="aspectFit" /><text>{{ viewPlace }}</text>
+          </view>
+          <view v-if="observerText" class="meta__row">
+            <image class="meta__icon" src="/static/icons/user.svg" mode="aspectFit" /><text>{{ observerText }}</text>
+          </view>
+          <view v-if="viewObservedAt" class="meta__row">
+            <image class="meta__icon" src="/static/icons/calendar.svg" mode="aspectFit" /><text>{{ fmtDate(viewObservedAt) }}</text>
+          </view>
         </view>
-        <view v-if="identificationPending" class="alert alert--warn">🔍 未知植物 · 待教师鉴定</view>
+        <view v-if="identificationPending" class="alert alert--warn">未知植物 · 待教师鉴定</view>
       </view>
 
       <view v-if="reviewText" class="card" :class="{ 'alert-card--reject': reviewRejected }">
-        <text class="h3">{{ reviewRejected ? '❌ 驳回意见' : '📝 教师审核意见' }}</text>
+        <text class="h3">{{ reviewRejected ? '驳回意见' : '教师审核意见' }}</text>
         <text class="muted-strong">{{ reviewText }}</text>
       </view>
       <view v-else-if="statusText === '待审核'" class="card">
@@ -85,12 +91,12 @@
         </view>
       </template>
       <view v-else-if="isMine" class="card">
-        <text class="muted">🔒 审核通过后，其他同学即可在展廊看到这条观察并留言评分。</text>
+        <text class="muted">审核通过后，其他同学即可在展廊看到这条观察并留言评分。</text>
       </view>
     </template>
 
     <EmptyState v-else-if="loading" icon="⏳" title="加载中…" />
-    <EmptyState v-else icon="🍂" title="记录不存在或未公开" hint="它可能已被删除或下线" />
+    <EmptyState v-else icon="plant" title="记录不存在或未公开" hint="它可能已被删除或下线" />
   </view>
 </template>
 
@@ -299,7 +305,8 @@ async function sendComment() {
 .photo-empty { align-items: center; }
 .sci { font-size: 26rpx; color: #7b8a80; font-style: italic; }
 .meta { display: flex; flex-direction: column; gap: 4rpx; margin-top: 6rpx; }
-.meta__row { font-size: 25rpx; color: #55645a; }
+.meta__row { display: flex; align-items: center; gap: 10rpx; font-size: 25rpx; color: #55645a; }
+.meta__icon { width: 26rpx; height: 26rpx; opacity: 0.6; flex-shrink: 0; }
 .alert { padding: 14rpx 18rpx; border-radius: 16rpx; font-size: 24rpx; }
 .alert--warn { background: #fdf3e3; color: #b7791f; }
 .alert-card--reject { border-left: 8rpx solid #d24a4a; }

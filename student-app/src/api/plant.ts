@@ -23,6 +23,13 @@ export function fetchNotifications(page = 1, size = 20) {
 export function markNotificationRead(id: string) {
   return post("/api/student/notify/read/" + id, {})
 }
+export function markAllNotificationsRead() {
+  return post("/api/student/notify/read-all", {})
+}
+export async function fetchUnreadCount() {
+  const result = await get<{ count: number | string }>("/api/student/notify/unread-count")
+  return Number(result?.count || 0)
+}
 
 // ---------- 观察记录 ----------
 export function createObservation(body: Record<string, unknown>) {

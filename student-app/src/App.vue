@@ -300,9 +300,19 @@ page {
   box-shadow: 0 8rpx 24rpx rgba(31, 45, 36, 0.06);
 }
 
+.tile__badge {
+  width: 78rpx;
+  height: 78rpx;
+  border-radius: 24rpx;
+  background: linear-gradient(180deg, #f1f7ec, #e5f0de);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .tile__icon {
-  font-size: 44rpx;
-  line-height: 1;
+  width: 42rpx;
+  height: 42rpx;
 }
 
 .tile__text {
@@ -322,15 +332,23 @@ page {
 }
 
 .item__icon {
-  width: 64rpx;
-  height: 64rpx;
-  border-radius: 18rpx;
-  background: #eef4ea;
+  width: 68rpx;
+  height: 68rpx;
+  border-radius: 20rpx;
+  background: linear-gradient(180deg, #f1f7ec, #e5f0de);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 32rpx;
   flex-shrink: 0;
+}
+
+.item__icon-img {
+  width: 38rpx;
+  height: 38rpx;
+}
+
+.item--press {
+  background: #f7fbf4;
 }
 
 .item__arrow {

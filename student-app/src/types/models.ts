@@ -57,6 +57,9 @@ export interface PhotoItem {
 export interface MyObservation {
   id: string
   status: string
+  /** 列表项封面（后端 MyObservationVO 提供，优先缩略图） */
+  coverUrl?: string | null
+  photoCount?: number | null
   speciesId?: string | null
   reportedCommonName?: string | null
   reportedScientificName?: string | null
