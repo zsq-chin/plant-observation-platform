@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.jingxuan.entity.SysUser;
 import com.jingxuan.exception.BusinessException;
 import com.jingxuan.mapper.SysUserMapper;
+import com.jingxuan.modules.notification.service.NotificationService;
 import com.jingxuan.modules.sensitive.service.DeepSeekReviewService;
 import com.jingxuan.plant.PlantStatuses;
 import com.jingxuan.plant.entity.PlantComment;
@@ -43,6 +44,7 @@ public class PlantCommunityService {
     private final PlantSpeciesMapper speciesMapper;
     private final SysUserMapper sysUserMapper;
     private final DeepSeekReviewService deepSeekReviewService;
+    private final NotificationService notificationService;
     private final org.springframework.data.redis.core.StringRedisTemplate redisTemplate;
 
     // ---------- 评论 ----------
@@ -64,7 +66,7 @@ public class PlantCommunityService {
     @Transactional(rollbackFor = Exception.class)
     public PlantComment addComment(Long observationId, Long userId, String roleCode,
                                    String content, Long parentId) {
-        requirePublicObservation(observationId);
+        PlantObservation target = requirePublicObservation(observationId);
         assertCommentRateAllowed(userId);
         if (!StringUtils.hasText(content) || content.trim().length() > 1000) {
             throw new BusinessException("评论内容不能为空且不超过1000字");
@@ -93,6 +95,16 @@ public class PlantCommunityService {
         comment.setIsPinned(0);
         comment.setStatus("NORMAL");
         commentMapper.insert(comment);
+        // 作者本人评论不通知自己；教师点评单独措辞
+        if (target != null && target.getSubmitterId() != null && !target.getSubmitterId().equals(userId)) {
+            notificationService.sendNotification(
+                    target.getSubmitterId(),
+                    teacher ? "收到教师点评" : "收到新评论",
+                    (teacher ? "教师点评了" : "有同学评论了") + "你的观察："
+                            + (text.length() > 40 ? text.substring(0, 40) + "…" : text),
+                    "plant-comment",
+                    observationId);
+        }
         return comment;
     }
 
@@ -223,12 +235,14 @@ public class PlantCommunityService {
 
     // ---------- 内部 ----------
 
-    private void requirePublicObservation(Long observationId) {
+    /** 校验观察已公开可互动，并返回该记录（评论时用于通知作者）。 */
+    private PlantObservation requirePublicObservation(Long observationId) {
         PlantObservation obs = observationMapper.selectById(observationId);
         if (obs == null || !PlantStatuses.APPROVED.equals(obs.getStatus())
                 || !Integer.valueOf(1).equals(obs.getIsPublic())) {
             throw new BusinessException("该观察记录不存在或未公开，无法互动");
         }
+        return obs;
     }
 
     private List<CommentVO> toCommentVOs(List<PlantComment> comments) {

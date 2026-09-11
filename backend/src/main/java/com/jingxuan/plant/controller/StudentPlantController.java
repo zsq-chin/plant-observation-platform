@@ -9,6 +9,7 @@ import com.jingxuan.plant.entity.PlantPhoto;
 import com.jingxuan.plant.service.PlantFieldService;
 import com.jingxuan.plant.service.PlantObservationService;
 import com.jingxuan.plant.service.PlantPhotoService;
+import com.jingxuan.plant.vo.MyObservationVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -47,7 +48,7 @@ public class StudentPlantController {
 
     @Operation(summary = "我的观察记录列表")
     @GetMapping("/observations")
-    public Result<PageResult<PlantObservation>> myList(
+    public Result<PageResult<MyObservationVO>> myList(
             @RequestParam(required = false) String status,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size) {

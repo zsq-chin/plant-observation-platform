@@ -6,6 +6,7 @@ import com.jingxuan.common.PageResult;
 import com.jingxuan.common.PageUtil;
 import com.jingxuan.exception.BusinessException;
 import com.jingxuan.mapper.SysUserMapper;
+import com.jingxuan.modules.notification.service.NotificationService;
 import com.jingxuan.plant.PlantStatuses;
 import com.jingxuan.plant.dto.ReviewDecisionRequest;
 import com.jingxuan.plant.entity.PlantObservation;
@@ -40,6 +41,7 @@ public class PlantReviewService {
     private final PlantSpeciesMapper plantSpeciesMapper;
     private final SysUserMapper sysUserMapper;
     private final PlantPhotoService photoService;
+    private final NotificationService notificationService;
 
     public PageResult<ReviewItemVO> list(String status, Long classId, Long speciesId, String provinceCode, int page, int size) {
         PageResult<PlantObservation> result = PageUtil.query(page, size, plantObservationMapper, w -> w
@@ -92,6 +94,13 @@ public class PlantReviewService {
         obs.setApprovedTime(LocalDateTime.now());
         plantObservationMapper.updateById(obs);
         recordReview(observationId, reviewerId, "APPROVED", req.comment());
+        // 学生端「消息通知」的审核结果来源（植物模块此前不发通知，页面永远是空的）
+        notificationService.sendNotification(
+                obs.getSubmitterId(),
+                "观察已通过审核",
+                "你的观察《" + observationName(obs) + "》已通过教师审核，现在可以在展廊被其他同学看到。",
+                "plant-audit",
+                observationId);
     }
 
     /** 驳回：学生可修改后重新提交。 */
@@ -104,6 +113,13 @@ public class PlantReviewService {
         obs.setStatus(PlantStatuses.REJECTED);
         plantObservationMapper.updateById(obs);
         recordReview(observationId, reviewerId, "REJECTED", req.comment());
+        notificationService.sendNotification(
+                obs.getSubmitterId(),
+                "观察被驳回",
+                "你的观察《" + observationName(obs) + "》未通过审核，意见：" + req.comment()
+                        + "。修改后可在「我的植物」重新提交。",
+                "plant-audit",
+                observationId);
     }
 
     /** 批量审核（V4 §77）：同一意见通过/驳回多条 SUBMITTED 记录。 */
@@ -124,6 +140,20 @@ public class PlantReviewService {
         }
     }
 
+    /** 通知里展示的观察名称（学生填报名优先，其次绑定物种名，最后兜底）。 */
+    private String observationName(PlantObservation obs) {
+        if (StringUtils.hasText(obs.getReportedCommonName())) {
+            return obs.getReportedCommonName();
+        }
+        if (obs.getSpeciesId() != null) {
+            PlantSpecies species = plantSpeciesMapper.selectById(obs.getSpeciesId());
+            if (species != null && StringUtils.hasText(species.getCommonName())) {
+                return species.getCommonName();
+            }
+        }
+        return "植物观察";
+    }
+
     /** 推荐为优秀观察 / 取消精选。 */
     @Transactional(rollbackFor = Exception.class)
     public void setFeatured(Long observationId, boolean featured, Long reviewerId) {
@@ -140,6 +170,14 @@ public class PlantReviewService {
             obs.setFeaturedBy(reviewerId);
         }
         plantObservationMapper.updateById(obs);
+        if (featured) {
+            notificationService.sendNotification(
+                    obs.getSubmitterId(),
+                    "观察被评为优秀",
+                    "你的观察《" + observationName(obs) + "》被教师推荐为优秀观察，已出现在首页精选。",
+                    "plant-feature",
+                    observationId);
+        }
     }
 
     private PlantObservation requireSubmittable(Long observationId) {

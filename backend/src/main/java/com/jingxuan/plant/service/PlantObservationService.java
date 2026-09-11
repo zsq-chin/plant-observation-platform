@@ -14,18 +14,22 @@ import com.jingxuan.plant.dto.ObservationSaveRequest;
 import com.jingxuan.plant.entity.PlantFieldDefinition;
 import com.jingxuan.plant.entity.PlantFieldValue;
 import com.jingxuan.plant.entity.PlantObservation;
+import com.jingxuan.plant.entity.PlantPhoto;
 import com.jingxuan.plant.entity.PlantSpecies;
 import com.jingxuan.plant.mapper.PlantFieldDefinitionMapper;
+import com.jingxuan.plant.vo.MyObservationVO;
 import com.jingxuan.plant.mapper.PlantFieldValueMapper;
 import com.jingxuan.plant.mapper.PlantObservationMapper;
 import com.jingxuan.plant.mapper.PlantSpeciesMapper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -44,6 +48,7 @@ public class PlantObservationService {
     private final PlantPhotoService photoService;
     private final PlantFieldDefinitionMapper fieldDefinitionMapper;
     private final PlantFieldValueMapper fieldValueMapper;
+    private final com.jingxuan.plant.mapper.PlantPhotoMapper plantPhotoMapper;
 
     @Transactional(rollbackFor = Exception.class)
     public PlantObservation createDraft(ObservationSaveRequest req, Long studentId) {
@@ -61,11 +66,41 @@ public class PlantObservationService {
         return obs;
     }
 
-    public PageResult<PlantObservation> listMine(Long studentId, String status, int page, int size) {
-        return PageUtil.query(page, size, plantObservationMapper, w -> w
+    /**
+     * 我的观察记录列表：一次批量查出本页所有记录的封面，避免逐条查询（N+1）。
+     * 列表页需要缩略图，因此返回带 coverUrl/photoCount 的 VO。
+     */
+    public PageResult<MyObservationVO> listMine(Long studentId, String status, int page, int size) {
+        PageResult<PlantObservation> result = PageUtil.query(page, size, plantObservationMapper, w -> w
                 .eq(PlantObservation::getSubmitterId, studentId)
                 .eq(StringUtils.hasText(status), PlantObservation::getStatus, status)
                 .orderByDesc(PlantObservation::getCreateTime));
+        List<PlantObservation> rows = result.getRecords();
+        if (rows == null || rows.isEmpty()) {
+            return PageResult.of(List.of(), result.getTotal(), result.getPageNum(), result.getPageSize());
+        }
+        List<Long> ids = rows.stream().map(PlantObservation::getId).toList();
+        Map<Long, List<PlantPhoto>> photosByObservation = plantPhotoMapper.selectList(Wrappers.<PlantPhoto>lambdaQuery()
+                        .in(PlantPhoto::getObservationId, ids)
+                        .orderByDesc(PlantPhoto::getIsCover)
+                        .orderByAsc(PlantPhoto::getSortOrder)
+                        .orderByAsc(PlantPhoto::getId))
+                .stream()
+                .collect(Collectors.groupingBy(PlantPhoto::getObservationId, LinkedHashMap::new, Collectors.toList()));
+        List<MyObservationVO> records = rows.stream().map(obs -> {
+            MyObservationVO vo = new MyObservationVO();
+            BeanUtils.copyProperties(obs, vo);
+            List<PlantPhoto> photos = photosByObservation.getOrDefault(obs.getId(), List.of());
+            vo.setPhotoCount(photos.size());
+            if (!photos.isEmpty()) {
+                PlantPhoto cover = photos.get(0);
+                vo.setCoverUrl(StringUtils.hasText(cover.getThumbnailUrl())
+                        ? cover.getThumbnailUrl()
+                        : cover.getFileUrl());
+            }
+            return vo;
+        }).toList();
+        return PageResult.of(records, result.getTotal(), result.getPageNum(), result.getPageSize());
     }
 
     public PlantObservation getMine(Long id, Long studentId) {
