@@ -6,7 +6,13 @@
  *    若在逻辑层用 document.getElementById 拿 uni 组件节点再初始化，会因 Vue 重渲染
  *    出现容器 id 丢失、高度为 0 的问题。
  *  - App：逻辑层没有 DOM，renderjs 运行在 WebView 视图层，可直接加载 ECharts。
- * 点击省份：通过 this.$ownerInstance.callMethod 回传逻辑层（ChinaMap2D.vue 的 onProvinceSelect）。
+ * 点击省份：H5 用 window 自定义事件，原生 App 用 this.$ownerInstance.callMethod（双通道）。
+ *
+ * 真机可用性（实测教训）：
+ *  - roam 必须关闭：手机上用户想滑动页面时手指按在地图上，ECharts 会把地图拖走，
+ *    结果整块区域变空白，看起来"地图没了"；
+ *  - 初始化前必须确认容器已有尺寸（部分 WebView 首帧高度为 0，ECharts 会画出空图）；
+ *  - 失败必须上报逻辑层，由逻辑层展示省份列表兜底，绝不能让页面出现空白区域。
  */
 import * as echarts from "echarts"
 
@@ -20,25 +26,56 @@ export default {
       chart: null,
       nameToCode: {},
       ready: false,
+      loading: false,
       payload: null,
+      retryTimer: null,
     }
   },
   mounted() {
     this.init()
   },
   beforeDestroy() {
+    if (this.retryTimer) clearTimeout(this.retryTimer)
     if (this.chart) {
       this.chart.dispose()
       this.chart = null
     }
   },
   methods: {
-    async init() {
-      if (this.chart) return
+    /** 图表容器：$el 通常是绑定 :change:prop 的节点，兼容其作为组件根的情况 */
+    container() {
       const el = this.$el
+      if (!el) return null
+      if (el.classList && el.classList.contains("china-map__canvas")) return el
+      return (el.querySelector && el.querySelector(".china-map__canvas")) || el
+    },
+
+    /** 等容器有真实尺寸再初始化；最多重试 20 次（约 4 秒） */
+    waitForSize(attempt) {
+      const el = this.container()
       if (!el) return
+      if (el.clientWidth > 0 && el.clientHeight > 0) {
+        this.init()
+        return
+      }
+      if (attempt >= 20) {
+        this.reportError("地图容器尺寸为 0")
+        return
+      }
+      this.retryTimer = setTimeout(() => this.waitForSize(attempt + 1), 200)
+    },
+
+    async init() {
+      // 并发保护：change:prop 与 mounted 可能同时触发，避免重复 init 同一个容器
+      if (this.chart || this.loading) return
+      const el = this.container()
+      if (!el) return
+      if (el.clientWidth === 0 || el.clientHeight === 0) {
+        this.waitForSize(0)
+        return
+      }
+      this.loading = true
       try {
-        console.log("[1] 开始加载地图数据", GEO_URL)
         const response = await fetch(GEO_URL)
         if (!response.ok) throw new Error("地图数据加载失败 " + response.status)
         const geo = await response.json()
@@ -53,22 +90,50 @@ export default {
           if (code === "710000" || name === "台湾省") taiwanFound = true
         }
         this.nameToCode = map
-        console.log("[2] GeoJSON 省份数", Object.keys(map).length, "含台湾", taiwanFound, "四川=", map["四川省"])
         echarts.registerMap("china", geo)
-        this.chart = echarts.init(el)
+        this.chart = echarts.init(el, null, {
+          width: el.clientWidth,
+          height: el.clientHeight,
+          renderer: "canvas",
+        })
         this.chart.on("click", (params) => {
           const name = String((params && params.name) || "")
           const code = this.nameToCode[name]
-          console.log("[3] ECharts 点击", name, "-> provinceCode =", code || "(未匹配)")
           if (!code) return
           this.emitSelect(code, name)
         })
         this.ready = true
         this.applyOption(this.payload)
+        this.reportReady(Object.keys(map).length, taiwanFound)
       } catch (error) {
-        console.error("地图初始化失败", error)
+        this.reportError((error && error.message) || String(error))
+      } finally {
+        this.loading = false
       }
     },
+
+    /** 上报逻辑层：地图已就绪 */
+    reportReady(provinceCount, taiwanFound) {
+      this.dispatch("china-map-ready", { provinceCount: provinceCount, hasTaiwan: !!taiwanFound })
+    },
+    /** 上报逻辑层：地图不可用（逻辑层据此展示省份列表兜底） */
+    reportError(message) {
+      console.error("[china-map] 初始化失败:", message)
+      this.dispatch("china-map-error", { message: String(message || "") })
+    },
+    dispatch(type, detail) {
+      if (this.$ownerInstance && typeof this.$ownerInstance.callMethod === "function") {
+        try {
+          this.$ownerInstance.callMethod("onMapEvent", { type: type, detail: detail })
+        } catch (error) {
+          /* H5 下 callMethod 不可用，走 window 事件 */
+        }
+      }
+      if (typeof window !== "undefined" && typeof window.dispatchEvent === "function") {
+        window.dispatchEvent(new CustomEvent(type, { detail: detail }))
+      }
+    },
+
     /**
      * 回传逻辑层（双通道）：
      *  - 原生 App：视图层与逻辑层分离，用 $ownerInstance.callMethod；
@@ -77,18 +142,18 @@ export default {
      */
     emitSelect(code, name) {
       const payload = { code: code, name: name }
-      console.log("[4] 回传逻辑层", JSON.stringify(payload), "callMethod=", !!(this.$ownerInstance && this.$ownerInstance.callMethod))
       if (this.$ownerInstance && typeof this.$ownerInstance.callMethod === "function") {
         try {
           this.$ownerInstance.callMethod("onProvinceSelect", payload)
         } catch (error) {
-          console.warn("[china-map] callMethod 不可用，改用 DOM 事件", error)
+          /* 走 window 事件 */
         }
       }
       if (typeof window !== "undefined" && typeof window.dispatchEvent === "function") {
         window.dispatchEvent(new CustomEvent("china-map-select", { detail: payload }))
       }
     },
+
     applyOption(payload) {
       if (!this.chart) return
       const stats = (payload && payload.stats) || []
@@ -97,7 +162,7 @@ export default {
       data.push({ name: "台湾省", value: 0, label: { show: true, position: "top" } })
       const maxValue = Math.max(1, ...data.map((d) => d.value))
       this.chart.setOption({
-        tooltip: { trigger: "item" },
+        tooltip: { trigger: "item", confine: true },
         visualMap: {
           min: 0,
           max: maxValue,
@@ -113,10 +178,11 @@ export default {
           {
             type: "map",
             map: "china",
-            roam: true,
-            zoom: 1.18,
+            // 关闭拖拽缩放：手机上手指滑动会落到地图上，roam 会把地图拖出可视区，
+            // 用户看到的就是一片空白（"地图不见了"）。全国图固定展示更稳妥。
+            roam: false,
+            zoom: 1.16,
             label: { show: true, fontSize: 9, color: "#33512a" },
-            // 无数据省份底色加深（原 #eef4e8 太浅，台湾等小岛几乎看不出），边界加粗便于辨认轮廓
             itemStyle: { borderColor: "#4f7a3c", borderWidth: 1.1, areaColor: "#bfd9a4" },
             emphasis: { label: { show: true, fontWeight: "bold" }, itemStyle: { areaColor: "#ffd166" } },
             data,
@@ -125,6 +191,7 @@ export default {
       })
       this.chart.resize()
     },
+
     render(newValue) {
       this.payload = newValue
       if (this.ready) this.applyOption(newValue)

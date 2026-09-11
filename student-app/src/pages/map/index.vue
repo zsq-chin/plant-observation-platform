@@ -1,8 +1,13 @@
 <template>
   <view class="page">
     <view class="card card--ink summary">
-      <text class="summary__title">全国植物观察地图</text>
-      <text class="summary__note">按学生主动选择的省/市/区县聚合，不读取设备定位</text>
+      <view class="summary__head">
+        <image class="summary__icon" src="/static/icons/white/map.svg" mode="aspectFit" />
+        <view class="grow">
+          <text class="summary__title">全国植物观察地图</text>
+          <text class="summary__note">按学生主动选择的省/市/区县聚合，不读取设备定位</text>
+        </view>
+      </view>
       <view class="summary__stats">
         <view class="summary__stat">
           <text class="summary__num">{{ rows.length }}</text><text class="summary__label">覆盖省份</text>
@@ -17,8 +22,20 @@
     </view>
 
     <view class="map-card">
-      <ChinaMap2D :stats="rows" :height="330" @select="onSelect" />
-      <text class="map-hint">👆 点击省份查看该省的植物观察</text>
+      <ChinaMap2D v-if="!mapFailed" :stats="rows" :height="330" @select="onSelect" @ready="onMapReady" @failed="onMapFailed" />
+      <view v-else class="map-fallback">
+        <view class="map-fallback__head">
+          <text class="map-fallback__title">地图暂不可用，已切换为省份列表</text>
+          <text class="map-fallback__retry" @tap="retryMap">重试地图</text>
+        </view>
+        <text class="map-fallback__hint">{{ mapFailReason || '可直接点击下方省份查看观察' }}</text>
+        <view class="map-fallback__grid">
+          <view v-for="r in rows" :key="r.provinceCode" class="map-fallback__item" @tap="onSelect(r.provinceCode, String(r.provinceName || r.provinceCode))">
+            <text class="map-fallback__name">{{ r.provinceName || r.provinceCode }}</text>
+            <text class="map-fallback__count">{{ numberValue(r.observationCount) }} 条</text>
+          </view>
+        </view>
+      </view>
     </view>
 
     <view class="card">
@@ -27,7 +44,7 @@
           <text class="h2 grow">{{ selectedName }}</text>
           <text class="chip chip--brand" @tap="clearSelection">收起</text>
         </view>
-        <view class="row row--tight">
+        <view class="row row--tight chips">
           <text class="chip">{{ numberValue(selectedStat.observationCount) }} 条观察</text>
           <text v-if="selectedStat.speciesCount" class="chip">{{ numberValue(selectedStat.speciesCount) }} 种植物</text>
           <text v-if="selectedStat.studentCount" class="chip">{{ numberValue(selectedStat.studentCount) }} 名学生</text>
@@ -41,7 +58,7 @@
             <text class="work__meta ellipsis">{{ w.displayName || w.submitterName || '匿名' }}</text>
           </view>
         </view>
-        <EmptyState v-else icon="🗺️" title="该省暂无公开观察" hint="换个省份看看，或先去采集一株" />
+        <EmptyState v-else icon="map" title="该省暂无公开观察" hint="换个省份看看，或先去采集一株" />
 
         <view v-if="worksTotal > works.length" class="more" @tap="loadMoreWorks">
           查看更多（{{ works.length }} / {{ worksTotal }}）
@@ -69,7 +86,7 @@
 </template>
 
 <script setup lang="ts">
-import { onShow } from "@dcloudio/uni-app"
+import { onShow, onUnload } from "@dcloudio/uni-app"
 import { computed, ref } from "vue"
 import ChinaMap2D from "@/components/ChinaMap2D.vue"
 import EmptyState from "@/components/EmptyState.vue"
@@ -91,6 +108,10 @@ const works = ref<ProvinceWorkItem[]>([])
 const worksTotal = ref(0)
 const worksLoading = ref(false)
 const page = ref(1)
+const mapReady = ref(false)
+const mapFailed = ref(false)
+const mapFailReason = ref("")
+let readyTimer: ReturnType<typeof setTimeout> | null = null
 
 const totalObservations = computed(() => rows.value.reduce((sum, r) => sum + numberValue(r.observationCount), 0))
 const totalSpecies = computed(() => rows.value.reduce((sum, r) => sum + numberValue(r.speciesCount), 0))
@@ -100,6 +121,37 @@ const topProvinces = computed(() =>
 const selectedStat = computed(
   () => rows.value.find((r) => r.provinceCode === selectedCode.value) || { observationCount: 0, speciesCount: 0, studentCount: 0 },
 )
+
+/** 地图 8 秒内没有就绪视为不可用，切到省份列表兜底，保证页面永远可用 */
+function armReadyTimeout() {
+  clearReadyTimeout()
+  readyTimer = setTimeout(() => {
+    if (!mapReady.value) onMapFailed("地图加载超时")
+  }, 8000)
+}
+function clearReadyTimeout() {
+  if (readyTimer) {
+    clearTimeout(readyTimer)
+    readyTimer = null
+  }
+}
+function onMapReady() {
+  mapReady.value = true
+  mapFailed.value = false
+  clearReadyTimeout()
+}
+function onMapFailed(reason: string) {
+  mapReady.value = false
+  mapFailed.value = true
+  mapFailReason.value = reason || ""
+  clearReadyTimeout()
+}
+function retryMap() {
+  mapFailed.value = false
+  mapFailReason.value = ""
+  mapReady.value = false
+  armReadyTimeout()
+}
 
 async function loadStats() {
   try {
@@ -151,29 +203,51 @@ function openWork(work: ProvinceWorkItem) {
 
 onShow(() => {
   loadStats()
+  if (!mapReady.value) armReadyTimeout()
+})
+
+onUnload(() => {
+  clearReadyTimeout()
 })
 </script>
 
 <style scoped>
-.summary { gap: 6rpx; }
-.summary__title { font-size: 36rpx; font-weight: 700; }
+.summary { gap: 8rpx; }
+.summary__head { display: flex; align-items: center; gap: 18rpx; }
+.summary__icon { width: 52rpx; height: 52rpx; flex-shrink: 0; }
+.summary__title { font-size: 36rpx; font-weight: 700; display: block; }
 .summary__note { font-size: 23rpx; color: rgba(255, 255, 255, 0.8); }
-.summary__stats { display: flex; margin-top: 20rpx; }
+.summary__stats { display: flex; margin-top: 22rpx; }
 .summary__stat { flex: 1; display: flex; flex-direction: column; align-items: center; }
-.summary__num { font-size: 40rpx; font-weight: 700; }
+.summary__num { font-size: 40rpx; font-weight: 700; line-height: 1.2; }
 .summary__label { font-size: 22rpx; color: rgba(255, 255, 255, 0.78); }
 .map-card {
   background: #ffffff;
   border-radius: 24rpx;
-  padding: 18rpx 12rpx 10rpx;
+  padding: 16rpx;
   box-shadow: 0 8rpx 24rpx rgba(31, 45, 36, 0.06);
+}
+.map-fallback { display: flex; flex-direction: column; gap: 12rpx; padding: 12rpx 8rpx 4rpx; }
+.map-fallback__head { display: flex; align-items: center; justify-content: space-between; gap: 12rpx; }
+.map-fallback__title { font-size: 27rpx; font-weight: 600; color: #55645a; }
+.map-fallback__retry { font-size: 25rpx; color: #3f9b3f; }
+.map-fallback__hint { font-size: 22rpx; color: #8a968c; }
+.map-fallback__grid { display: flex; flex-wrap: wrap; gap: 12rpx; margin-top: 6rpx; }
+.map-fallback__item {
+  width: calc((100% - 24rpx) / 3);
+  background: #f6faf3;
+  border: 1rpx solid #e4efe0;
+  border-radius: 16rpx;
+  padding: 18rpx 10rpx;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6rpx;
+  gap: 2rpx;
 }
-.map-hint { font-size: 22rpx; color: #8a968c; }
+.map-fallback__name { font-size: 25rpx; color: #1f2d24; }
+.map-fallback__count { font-size: 21rpx; color: #7b8a80; }
 .loading { padding: 20rpx 0; }
+.chips { flex-wrap: wrap; }
 .works { display: flex; flex-wrap: wrap; gap: 14rpx; }
 .work { width: calc((100% - 28rpx) / 3); display: flex; flex-direction: column; gap: 6rpx; }
 .work__img { width: 100%; height: 168rpx; border-radius: 16rpx; background: #eef4ea; }
