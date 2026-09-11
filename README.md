@@ -9,6 +9,8 @@
 - 教师端：审核工作台（单条/批量通过、驳回意见、质量提示）、物种建议处理、优秀观察推荐
 - 管理员端：物种库与类别维护、违规记录强制下线/重新上架、图片健康与一致性巡检
 
+> **交付**：验收步骤、账号、部署顺序、真因与排障见 [docs/delivery-checklist.md](docs/delivery-checklist.md)。
+
 > 本项目由一个校园作品展示平台改造而来（V2 平台化 → V3 图片本地化与 3D 地图 → V4 学生 App 与正式上线）。旧作品域（work/audit/score/rank/prize）代码与页面保留停用、未删除，详见 [docs/plant-platform-transformation.md](docs/plant-platform-transformation.md)。
 
 ---
@@ -154,7 +156,11 @@ python -X utf8 scripts/restore-plant.py --backup-dir backup/plant-media
 | Web 前端 | typecheck / lint 通过，Vitest 92 通过（24 既有跳过） |
 | 全栈 E2E | 37 项通过（注册登录 → 采集传图 → 提交 → 审核 → 展廊/首页/详情 → 地图 → 评论评分 → 下线/上架） |
 | V4 冒烟 | 25 项通过（Actuator、防爆破、双端工作台、搜索、物种建议、批量审核、照片器官/封面/排序） |
-| 学生 App | `npm run build:h5` 构建通过 |
+| 学生 App | `npm run build:h5` + `vue-tsc` 通过 |
+| 手机端地图可见性 | 像素级校验通过（实心像素占比 0.27），手势拖拽后仍可见，加载失败自动切省份列表兜底 |
+| 植物通知闭环 | 6 项通过（驳回/通过/点评/精选通知 + 标记已读 + 全部已读） |
+| 学生端改版 | 20 项通过（底部 5 图标互异、首页视觉、地图入口跳转、9 个页面渲染、无控制台错误） |
+| 我的植物封面 | 接口返回 `coverUrl`/`photoCount`（11/11 条），列表显示缩略图 |
 | CI 门禁 | `.github/workflows/ci.yml`：前端质量、后端单测+集成、plant-docker-e2e（全栈 E2E 与冒烟） |
 
 ## 数据库迁移（Flyway 只增不改）
@@ -199,7 +205,10 @@ python -X utf8 scripts/restore-plant.py --backup-dir backup/plant-media
 | [docs/plant-platform-manual-student.md](docs/plant-platform-manual-student.md) | 学生用户手册（Web + App） |
 | [docs/plant-platform-manual-teacher-admin.md](docs/plant-platform-manual-teacher-admin.md) | 教师与管理员手册 |
 | [docs/plant-platform-pilot.md](docs/plant-platform-pilot.md) | 1.0 试点运行说明 |
+| [docs/delivery-checklist.md](docs/delivery-checklist.md) | **交付验收清单**：入口账号、部署步骤、逐项验收、真因与排障、已知限制 |
 | [docs/student-app-android-build.md](docs/student-app-android-build.md) | 学生 App 构建与 Android 打包 |
+| [docs/student-app-ui-design.md](docs/student-app-ui-design.md) | 学生端视觉系统、图标方案与地图入口真因 |
+| [docs/taiwan-mobile-map-photo-fixes.md](docs/taiwan-mobile-map-photo-fixes.md) | 台湾省 / 手机地图 / 图片显示三轮实测根因与修复记录 |
 | [docs/plant-map-data-source-and-compliance.md](docs/plant-map-data-source-and-compliance.md) | 地图边界数据来源与合规 |
 | [docs/demo-photo-credits.md](docs/demo-photo-credits.md) | 演示照片署名与许可 |
 | [AGENTS.md](AGENTS.md) | 面向开发者的仓库结构与约定 |
