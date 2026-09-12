@@ -16,11 +16,12 @@ defineProps<{ title: string; subtitle?: string }>()
 </script>
 
 <style scoped>
+/* 头图刻意保持紧凑：底部留白只够放圆角，避免像"一整块盖住内容" */
 .hero {
-  padding: calc(var(--status-bar-height, 0px) + 34rpx) 30rpx 76rpx;
+  padding: calc(var(--status-bar-height, 0px) + 22rpx) 28rpx 34rpx;
   background: linear-gradient(135deg, #4aa64a 0%, #2f7a34 62%, #276b2e 100%);
-  border-bottom-left-radius: 40rpx;
-  border-bottom-right-radius: 40rpx;
+  border-bottom-left-radius: 28rpx;
+  border-bottom-right-radius: 28rpx;
   color: #ffffff;
   position: relative;
   overflow: hidden;
@@ -28,38 +29,28 @@ defineProps<{ title: string; subtitle?: string }>()
 .hero::after {
   content: "";
   position: absolute;
-  right: -70rpx;
-  top: -80rpx;
-  width: 300rpx;
-  height: 300rpx;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1);
-}
-.hero::before {
-  content: "";
-  position: absolute;
-  left: -60rpx;
-  bottom: -120rpx;
+  right: -60rpx;
+  top: -70rpx;
   width: 220rpx;
   height: 220rpx;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.09);
 }
 .hero__head {
   display: flex;
   align-items: center;
-  gap: 20rpx;
+  gap: 18rpx;
   position: relative;
 }
 .hero__title {
-  font-size: 46rpx;
+  font-size: 40rpx;
   font-weight: 700;
-  line-height: 1.25;
+  line-height: 1.2;
 }
 .hero__sub {
-  font-size: 25rpx;
+  font-size: 23rpx;
   color: rgba(255, 255, 255, 0.85);
-  margin-top: 6rpx;
+  margin-top: 4rpx;
 }
 .grow { flex: 1; min-width: 0; }
 </style>

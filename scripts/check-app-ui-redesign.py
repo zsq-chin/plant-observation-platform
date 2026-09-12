@@ -47,19 +47,22 @@ with sync_playwright() as p:
     # 首页视觉
     hero = page.evaluate("""() => {
         const h = document.querySelector('uni-view.hero, .hero');
-        const tiles = document.querySelectorAll('.tile').length;
+        const tiles = document.querySelectorAll('.quick__item').length;
         const stats = document.querySelectorAll('.stat').length;
         const cs = h ? getComputedStyle(h) : null;
-        return { hero: !!h, bg: cs ? cs.backgroundImage.slice(0, 40) : '', tiles, stats };
+        const lift = document.querySelector('.lift');
+        const quickFirst = !!(lift && lift.firstElementChild && lift.firstElementChild.className.toString().includes('quick'));
+        return { hero: !!h, bg: cs ? cs.backgroundImage.slice(0, 40) : '', tiles, stats, quickFirst };
     }""")
     print("  首页:", hero)
     check(hero["hero"], "首页有渐变头图")
     check("gradient" in hero["bg"], "头图使用渐变背景")
     check(hero["stats"] == 4, "首页 4 个统计块（实际 %d）" % hero["stats"])
     check(hero["tiles"] == 6, "首页 6 个快捷入口（实际 %d）" % hero["tiles"])
+    check(hero["quickFirst"], "快捷入口位于内容区最上方")
 
     # 关键：点「全国地图」必须能跳转（原实现用 switchTab 对非 tabBar 页面静默失败）
-    page.locator(".tile", has_text="全国地图").first.click()
+    page.locator(".quick__item", has_text="全国地图").first.click()
     page.wait_for_timeout(3200)
     on_map = "pages/map/index" in page.url
     check(on_map, "点击首页「全国地图」跳转到地图页（%s）" % page.url)

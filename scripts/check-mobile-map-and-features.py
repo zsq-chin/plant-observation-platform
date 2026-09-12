@@ -55,7 +55,7 @@ with sync_playwright() as p:
     console_errors = []
     page.on("console", lambda m: console_errors.append(m.text[:150]) if m.type == "error" else None)
     page.on("pageerror", lambda e: console_errors.append(str(e)[:150]))
-    page.locator(".tile", has_text="全国地图").first.click()
+    page.locator(".quick__item", has_text="全国地图").first.click()
     page.wait_for_timeout(6000)
     check("pages/map/index" in page.url, "首页点「全国地图」成功进入地图页")
     check(not console_errors, "切换过程中无控制台错误（%s）" % (console_errors[:1] or "无"))

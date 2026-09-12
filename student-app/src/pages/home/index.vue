@@ -4,19 +4,21 @@
       <template #right>
         <view class="avatar" @tap="goProfile">{{ avatarText }}</view>
       </template>
-      <view class="hero-actions">
-        <view class="hero-action" @tap="capture">
-          <image class="hero-action__icon" src="/static/icons/white/camera.svg" mode="aspectFit" />
-          <text class="hero-action__text">采集植物</text>
-        </view>
-        <view class="hero-action" @tap="goMap">
-          <image class="hero-action__icon" src="/static/icons/white/map.svg" mode="aspectFit" />
-          <text class="hero-action__text">全国地图</text>
-        </view>
-      </view>
     </AppHero>
 
     <view class="lift">
+      <!-- 快捷入口放在最上面，一进首页就能看到 -->
+      <view class="card quick">
+        <view class="quick__grid">
+          <view v-for="t in tiles" :key="t.key" class="quick__item" hover-class="quick__item--press" @tap="t.action()">
+            <view class="quick__badge">
+              <image class="quick__icon" :src="'/static/icons/' + t.icon + '.svg'" mode="aspectFit" />
+            </view>
+            <text class="quick__label">{{ t.label }}</text>
+          </view>
+        </view>
+      </view>
+
       <view v-if="pendingLocal > 0" class="notice" @tap="goLocalDrafts">
         <image class="notice__icon" src="/static/icons/cloud.svg" mode="aspectFit" />
         <view class="grow">
@@ -49,16 +51,6 @@
         <ObservationCard :item="item" @open="openDetail" />
       </view>
       <EmptyState v-if="!featured.length" icon="plant" title="还没有优秀观察" hint="先去采集，通过审核后就有机会登上首页" />
-
-      <view class="sec"><text class="sec__title">快捷入口</text></view>
-      <view class="tiles">
-        <view class="tile" v-for="t in tiles" :key="t.key" hover-class="tile--press" @tap="t.action()">
-          <view class="tile__badge">
-            <image class="tile__icon" :src="'/static/icons/' + t.icon + '.svg'" mode="aspectFit" />
-          </view>
-          <text class="tile__text">{{ t.label }}</text>
-        </view>
-      </view>
     </view>
   </view>
 </template>
@@ -122,38 +114,44 @@ function goMine() {
 function goNotifications() {
   uni.navigateTo({ url: "/pages/notification/index" })
 }
-function goSuggestion() {
-  uni.navigateTo({ url: "/pages/suggestion/index" })
-}
 function goProfile() {
   uni.switchTab({ url: "/pages/profile/index" })
 }
 
 const tiles = [
+  { key: "capture", icon: "camera", label: "采集植物", action: capture },
   { key: "map", icon: "map", label: "全国地图", action: goMap },
   { key: "gallery", icon: "gallery", label: "植物展廊", action: goGallery },
   { key: "mine", icon: "plant", label: "我的植物", action: goMine },
   { key: "notify", icon: "bell", label: "消息通知", action: goNotifications },
-  { key: "suggest", icon: "bulb", label: "物种建议", action: goSuggestion },
   { key: "profile", icon: "user", label: "我的", action: goProfile },
 ]
 </script>
 
 <style scoped>
-.hero-actions { display: flex; gap: 18rpx; margin-top: 28rpx; position: relative; }
-.hero-action {
-  flex: 1;
+.quick { padding: 18rpx 12rpx 8rpx; }
+.quick__grid { display: flex; flex-wrap: wrap; }
+.quick__item {
+  width: 33.33%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10rpx;
+  padding: 14rpx 0 18rpx;
+  border-radius: 18rpx;
+}
+.quick__item--press { background: #f4f9f1; }
+.quick__badge {
+  width: 78rpx;
+  height: 78rpx;
+  border-radius: 24rpx;
+  background: linear-gradient(180deg, #f1f7ec, #e5f0de);
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10rpx;
-  padding: 20rpx 0;
-  border-radius: 20rpx;
-  background: rgba(255, 255, 255, 0.18);
-  border: 1rpx solid rgba(255, 255, 255, 0.22);
 }
-.hero-action__icon { width: 34rpx; height: 34rpx; }
-.hero-action__text { font-size: 27rpx; color: #ffffff; font-weight: 600; }
+.quick__icon { width: 42rpx; height: 42rpx; }
+.quick__label { font-size: 24rpx; color: #55645a; }
 .notice {
   display: flex;
   align-items: center;
@@ -167,5 +165,4 @@ const tiles = [
 .notice__title { display: block; font-size: 28rpx; color: #a86a15; font-weight: 600; }
 .notice__hint { display: block; font-size: 22rpx; color: #bd9146; }
 .stat--press { background: #fbfdfa; }
-.tile--press { background: #fbfdfa; transform: scale(0.98); }
 </style>

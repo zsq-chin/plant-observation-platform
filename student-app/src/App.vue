@@ -410,10 +410,10 @@ page {
   padding: 0 24rpx;
 }
 
-/* 头图下方的浮起内容 */
+/* 头图下方的内容区：不留负边距，避免卡片与头图互相压住 */
 .lift {
-  margin-top: -56rpx;
-  padding: 0 24rpx;
+  margin-top: 0;
+  padding: 20rpx 24rpx 0;
   display: flex;
   flex-direction: column;
   gap: 18rpx;

@@ -235,7 +235,7 @@ function photosText(d: LocalDraft) {
 </script>
 
 <style scoped>
-.tabs-wrap { margin-top: -46rpx; }
+.tabs-wrap { margin-top: 0; padding-top: 20rpx; }
 .tabs { width: 100%; white-space: nowrap; }
 .tabs__inner { display: inline-flex; gap: 14rpx; padding: 0 24rpx; }
 .pill {

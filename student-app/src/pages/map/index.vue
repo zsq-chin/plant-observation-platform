@@ -212,15 +212,16 @@ onUnload(() => {
 </script>
 
 <style scoped>
-.summary { gap: 8rpx; }
-.summary__head { display: flex; align-items: center; gap: 18rpx; }
-.summary__icon { width: 52rpx; height: 52rpx; flex-shrink: 0; }
-.summary__title { font-size: 36rpx; font-weight: 700; display: block; }
-.summary__note { font-size: 23rpx; color: rgba(255, 255, 255, 0.8); }
-.summary__stats { display: flex; margin-top: 22rpx; }
+/* 顶部信息块刻意压扁：原来太高，像一整块盖住下面的地图 */
+.summary { gap: 2rpx; padding: 20rpx 22rpx; }
+.summary__head { display: flex; align-items: center; gap: 14rpx; }
+.summary__icon { width: 40rpx; height: 40rpx; flex-shrink: 0; }
+.summary__title { font-size: 31rpx; font-weight: 700; display: block; line-height: 1.25; }
+.summary__note { font-size: 21rpx; color: rgba(255, 255, 255, 0.78); }
+.summary__stats { display: flex; margin-top: 14rpx; }
 .summary__stat { flex: 1; display: flex; flex-direction: column; align-items: center; }
-.summary__num { font-size: 40rpx; font-weight: 700; line-height: 1.2; }
-.summary__label { font-size: 22rpx; color: rgba(255, 255, 255, 0.78); }
+.summary__num { font-size: 34rpx; font-weight: 700; line-height: 1.15; }
+.summary__label { font-size: 20rpx; color: rgba(255, 255, 255, 0.76); }
 .map-card {
   background: #ffffff;
   border-radius: 24rpx;
